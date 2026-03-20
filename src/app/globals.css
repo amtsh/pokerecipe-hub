@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { background: #ffffff; color: #0a0a0a; font-family: 'Inter', system-ui, sans-serif; }
+input:-webkit-autofill { -webkit-box-shadow: 0 0 0 100px #fff inset !important; }
+::selection { background: #0a0a0a; color: #ffffff; }
