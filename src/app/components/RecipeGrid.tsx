@@ -1,70 +1,40 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
 const SAMPLE_RECIPES: Recipe[] = [
-  {
-    id: "1",
-    name: "Morning News Brief",
-    description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM.",
-    slug: "morning-news-brief",
-    author: "community",
-    tags: ["News", "Daily"],
-  },
-  {
-    id: "2",
-    name: "Inbox Zero",
-    description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically.",
-    slug: "inbox-zero",
-    author: "community",
-    tags: ["Email", "Productivity"],
-  },
-  {
-    id: "3",
-    name: "Weekly Retrospective",
-    description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan.",
-    slug: "weekly-retrospective",
-    author: "community",
-    tags: ["Reflection", "Weekly"],
-  },
-  {
-    id: "4",
-    name: "Travel Companion",
-    description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links.",
-    slug: "travel-companion",
-    author: "community",
-    tags: ["Travel", "Automation"],
-  },
-  {
-    id: "5",
-    name: "Finance Pulse",
-    description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot.",
-    slug: "finance-pulse",
-    author: "community",
-    tags: ["Finance", "Weekly"],
-  },
-  {
-    id: "6",
-    name: "Meeting Prep",
-    description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared.",
-    slug: "meeting-prep",
-    author: "community",
-    tags: ["Calendar", "Meetings"],
-  },
+  { id: "1", name: "Morning News Brief",   slug: "morning-news-brief",   author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
+  { id: "2", name: "Inbox Zero",            slug: "inbox-zero",            author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
+  { id: "3", name: "Weekly Retrospective", slug: "weekly-retrospective",  author: "community", tags: ["Reflection", "Weekly"],  description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan." },
+  { id: "4", name: "Travel Companion",     slug: "travel-companion",      author: "community", tags: ["Travel", "Automation"],  description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links." },
+  { id: "5", name: "Finance Pulse",        slug: "finance-pulse",         author: "community", tags: ["Finance", "Weekly"],     description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot." },
+  { id: "6", name: "Meeting Prep",         slug: "meeting-prep",          author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
 ];
 
 export default function RecipeGrid() {
-  const [query, setQuery] = useState("");
+  const [query, setQuery]       = useState("");
+  const [clickMap, setClickMap] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    fetch("/api/click")
+      .then((r) => r.json())
+      .then(({ data }: { data?: { slug: string; clicks: number }[] }) => {
+        if (!data) return;
+        const map: Record<string, number> = {};
+        for (const row of data) map[row.slug] = row.clicks;
+        setClickMap(map);
+      })
+      .catch(() => {});
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
     if (!q) return SAMPLE_RECIPES;
-    return SAMPLE_RECIPES.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.description.toLowerCase().includes(q) ||
-        r.tags.some((t) => t.toLowerCase().includes(q))
+    return SAMPLE_RECIPES.filter((r) =>
+      r.name.toLowerCase().includes(q) ||
+      r.description.toLowerCase().includes(q) ||
+      r.tags.some((t) => t.toLowerCase().includes(q))
     );
   }, [query]);
 
@@ -82,13 +52,13 @@ export default function RecipeGrid() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by name, tag, or keyword…"
+            placeholder="Search by name, tag, or keyword\u2026"
             className="w-full bg-lift border border-rule rounded-full px-5 py-3 text-sm text-ink placeholder-faint focus:outline-none focus:border-ink/30 transition-colors"
           />
           {query && (
             <button onClick={() => setQuery("")} aria-label="Clear"
               className="absolute right-4 top-1/2 -translate-y-1/2 text-faint hover:text-muted text-xs transition-colors">
-              ✕
+              \u2715
             </button>
           )}
         </div>
@@ -100,7 +70,7 @@ export default function RecipeGrid() {
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((recipe) => (
-            <RecipeCard key={recipe.id} recipe={recipe} />
+            <RecipeCard key={recipe.id} recipe={recipe} clicks={clickMap[recipe.slug] ?? 0} />
           ))}
         </div>
       ) : (
