@@ -29,68 +29,61 @@ Both values are in your Supabase project under **Settings > API**.
 
 ## Supabase setup
 
+The database stores only two fields per recipe: the canonical URL and a click count.
+
 ### 1. Create the `recipes` table
 
 ```sql
 create table recipes (
-  slug        text primary key,
-  name        text,
-  description text,
-  url         text,
-  clicks      integer not null default 0,
-  created_at  timestamptz default now()
+  url     text primary key,
+  clicks  integer not null default 0
 );
-```
-
-If you already have a `recipes` table from a prior version, run:
-
-```sql
-alter table recipes
-  add column if not exists name        text,
-  add column if not exists description text,
-  add column if not exists url         text,
-  add column if not exists created_at  timestamptz default now();
 ```
 
 ### 2. Create the `increment_clicks` function
 
 ```sql
-create or replace function increment_clicks(recipe_slug text)
+create function increment_clicks(recipe_url text)
 returns void as $$
-  insert into recipes (slug, clicks)
-  values (recipe_slug, 1)
-  on conflict (slug)
+  insert into recipes (url, clicks)
+  values (recipe_url, 1)
+  on conflict (url)
   do update set clicks = recipes.clicks + 1;
 $$ language sql;
 ```
 
-### 3. Row-Level Security (recommended)
+### 3. Row-Level Security
 
 ```sql
 alter table recipes enable row level security;
-create policy "public read"      on recipes for select using (true);
-create policy "public insert"    on recipes for insert with check (true);
-create policy "public update"    on recipes for update using (true);
+create policy "public read"   on recipes for select using (true);
+create policy "public insert" on recipes for insert with check (true);
+create policy "public update" on recipes for update using (true);
 ```
 
 ---
 
 ## Architecture
 
+### Database (simplified)
+- Only `url` (primary key) and `clicks` are stored in Supabase.
+- Metadata (name, description) is never persisted. It is fetched on the fly by the scraper for the submit preview and derived from the URL slug on the homepage.
+
 ### Submission flow
 1. User pastes a `poke.com/r/...` or `poke.com/refer/...` link on `/submit`.
-2. `POST /api/scrape` fetches the page server-side and extracts `og:title` / `og:description`.
-3. User reviews the name + description on a confirmation screen.
-4. On confirm, `POST /api/recipes` upserts `{ slug, name, description, url, clicks: 0 }` into Supabase.
+2. `POST /api/scrape` fetches og:title/og:description for the preview screen only.
+3. User reviews the preview, then confirms.
+4. `POST /api/recipes` saves only `{ url }` to Supabase with `clicks = 0`.
 
 ### Homepage
-- `src/app/page.tsx` is a `force-dynamic` server component that queries Supabase for the top 10 recipes ordered by clicks.
-- Falls back to 6 seed recipes if Supabase is not configured or has no data yet.
+- `src/app/page.tsx` queries Supabase for the top 10 URLs ordered by clicks.
+- Recipe names are derived from the URL slug (e.g. `morning-news-brief` → `Morning News Brief`).
+- Falls back to 6 seed recipes if Supabase has no data yet.
 
 ### Click tracking
-- `GET /api/click` returns all `{ slug, clicks }` rows.
-- `POST /api/click` atomically increments via the `increment_clicks` Postgres function.
-- Clicking **Add to Poke** optimistically increments the local counter and fires the POST in the background.
+- `GET /api/click` returns all `{ url, clicks }` rows.
+- `POST /api/click` takes `{ url }` and atomically increments via `increment_clicks(recipe_url)`.
+- Clicking **Add to Poke** optimistically increments the counter and fires the POST in the background.
 
 ---
 
@@ -98,21 +91,21 @@ create policy "public update"    on recipes for update using (true);
 
 ```
 lib/
-  supabase.ts                  -- lazy Supabase client (getSupabase())
+  supabase.ts                  -- lazy Supabase client
   decode-entities.ts           -- HTML entity + JS unicode escape decoder
 src/app/
   page.tsx                     -- server component, fetches top 10
   layout.tsx
   globals.css
   api/
-    click/route.ts             -- GET read clicks, POST increment
-    recipes/route.ts           -- GET top 10, POST new recipe
-    scrape/route.ts            -- POST scrape og meta from poke.com/r/...
-  submit/page.tsx              -- single-input + Paste button flow
+    click/route.ts             -- GET { url, clicks }, POST increment by url
+    recipes/route.ts           -- GET top 10, POST { url } only
+    scrape/route.ts            -- POST scrape og meta (preview only, not saved)
+  submit/page.tsx              -- single-input + Paste + confirm flow
   components/
     Navbar.tsx
     Hero.tsx
-    RecipeGrid.tsx             -- client, search + grid
-    RecipeCard.tsx             -- click tracking per card
+    RecipeGrid.tsx
+    RecipeCard.tsx             -- tracks clicks by url
     Footer.tsx
 ```

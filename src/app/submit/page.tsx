@@ -49,27 +49,25 @@ export default function SubmitPage() {
     }
     setPhase("loading");
     try {
-      const res  = await fetch("/api/scrape", {
+      const res = await fetch("/api/scrape", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
       });
       if (!res.ok) {
-        setPhase("input");
-        // Only surface safe validation messages from the scrape route
         const data = await res.json().catch(() => ({}));
-        const msg  = typeof data?.error === "string" && data.error.length < 120
+        const msg = typeof data?.error === "string" && data.error.length < 120
           ? data.error
           : "Something went wrong. Please try again.";
         setError(msg);
+        setPhase("input");
         return;
       }
-      const data = await res.json();
-      setScraped(data as ScrapedData);
+      setScraped(await res.json() as ScrapedData);
       setPhase("confirm");
     } catch {
-      setPhase("input");
       setError("Something went wrong. Please try again.");
+      setPhase("input");
     }
   }
 
@@ -78,10 +76,11 @@ export default function SubmitPage() {
     setError("");
     setPhase("saving");
     try {
+      // Only save the canonical URL — name/description are NOT stored in DB
       const res = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(scraped),
+        body: JSON.stringify({ canonical: scraped.canonical }),
       });
       if (!res.ok) {
         setError("Something went wrong. Please try again.");
@@ -126,7 +125,7 @@ export default function SubmitPage() {
             <div className="space-y-6 sm:space-y-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink mb-2">Looks right?</h1>
-                <p className="text-sm text-muted">We pulled this from the recipe link. Confirm to submit.</p>
+                <p className="text-sm text-muted">We pulled this from your link. Confirm to submit.</p>
               </div>
               <div className="border border-rule rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
                 <Row label="Name"        value={scraped.name        || "\u2014"} />
@@ -137,8 +136,7 @@ export default function SubmitPage() {
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleConfirm}
-                  disabled={phase === "saving" as unknown as boolean}
-                  className="flex-1 bg-ink text-white text-sm font-medium py-3 rounded-full hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="flex-1 bg-ink text-white text-sm font-medium py-3 rounded-full hover:bg-muted transition-colors flex items-center justify-center"
                 >
                   Submit
                 </button>
@@ -150,20 +148,11 @@ export default function SubmitPage() {
             </div>
           )}
 
-          {/* Saving spinner overlay on confirm */}
-          {phase === "saving" && scraped && (
-            <div className="space-y-6 sm:space-y-8">
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink mb-2">Submitting\u2026</h1>
-              </div>
-              <div className="border border-rule rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 opacity-50">
-                <Row label="Name"        value={scraped.name        || "\u2014"} />
-                <Row label="Description" value={scraped.description || "\u2014"} />
-                <Row label="Link"        value={scraped.canonical}  isLink />
-              </div>
-              <div className="flex justify-center pt-2">
-                <Spinner className="h-5 w-5 text-muted" />
-              </div>
+          {/* Saving */}
+          {phase === "saving" && (
+            <div className="flex flex-col items-center gap-4 py-16">
+              <Spinner className="h-5 w-5 text-muted" />
+              <p className="text-sm text-muted">Submitting\u2026</p>
             </div>
           )}
 
@@ -244,12 +233,8 @@ function Row({ label, value, isLink }: { label: string; value: string; isLink?: 
 
 function Spinner({ className }: { className?: string }) {
   return (
-    <svg
-      className={`animate-spin ${className ?? "h-4 w-4"}`}
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
+    <svg className={`animate-spin ${className ?? "h-4 w-4"}`}
+      xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>

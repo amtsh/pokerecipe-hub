@@ -3,20 +3,18 @@
 import { useState, useMemo, useEffect } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
-// Shown when Supabase has no recipes yet
 const SAMPLE_RECIPES: Recipe[] = [
-  { id: "1", name: "Morning News Brief",   slug: "morning-news-brief",  author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
-  { id: "2", name: "Inbox Zero",            slug: "inbox-zero",           author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
-  { id: "3", name: "Weekly Retrospective", slug: "weekly-retrospective",  author: "community", tags: ["Reflection", "Weekly"],  description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan." },
-  { id: "4", name: "Travel Companion",     slug: "travel-companion",      author: "community", tags: ["Travel", "Automation"],  description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links." },
-  { id: "5", name: "Finance Pulse",        slug: "finance-pulse",         author: "community", tags: ["Finance", "Weekly"],     description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot." },
-  { id: "6", name: "Meeting Prep",         slug: "meeting-prep",          author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
+  { id: "1", name: "Morning News Brief",   url: "https://poke.com/r/morning-news-brief",  slug: "morning-news-brief",  author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
+  { id: "2", name: "Inbox Zero",            url: "https://poke.com/r/inbox-zero",           slug: "inbox-zero",           author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
+  { id: "3", name: "Weekly Retrospective", url: "https://poke.com/r/weekly-retrospective", slug: "weekly-retrospective", author: "community", tags: ["Reflection", "Weekly"],  description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan." },
+  { id: "4", name: "Travel Companion",     url: "https://poke.com/r/travel-companion",     slug: "travel-companion",     author: "community", tags: ["Travel", "Automation"],  description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links." },
+  { id: "5", name: "Finance Pulse",        url: "https://poke.com/r/finance-pulse",        slug: "finance-pulse",        author: "community", tags: ["Finance", "Weekly"],     description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot." },
+  { id: "6", name: "Meeting Prep",         url: "https://poke.com/r/meeting-prep",         slug: "meeting-prep",         author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
 ];
 
 interface RecipeGridProps {
-  /** Server-fetched top recipes from Supabase. Falls back to SAMPLE_RECIPES if empty. */
   initialRecipes?: Recipe[];
-  /** Server-fetched click counts. Falls back to a client-side fetch if empty. */
+  /** Click map keyed by URL e.g. { "https://poke.com/r/inbox-zero": 42 } */
   initialClickMap?: Record<string, number>;
 }
 
@@ -28,15 +26,15 @@ export default function RecipeGrid({
   const [query, setQuery]       = useState("");
   const [clickMap, setClickMap] = useState<Record<string, number>>(initialClickMap);
 
-  // Only do a client-side click fetch when there's no server-side data
+  // Client-side click fetch only when no server-side data was provided
   useEffect(() => {
     if (Object.keys(initialClickMap).length > 0) return;
     fetch("/api/click")
       .then((r) => r.json())
-      .then(({ data }: { data?: { slug: string; clicks: number }[] }) => {
+      .then(({ data }: { data?: { url: string; clicks: number }[] }) => {
         if (!data) return;
         const map: Record<string, number> = {};
-        for (const row of data) map[row.slug] = row.clicks;
+        for (const row of data) map[row.url] = row.clicks;
         setClickMap(map);
       })
       .catch(() => {});
@@ -54,14 +52,12 @@ export default function RecipeGrid({
 
   return (
     <section id="browse" className="max-w-wide mx-auto px-4 sm:px-6 pb-24 sm:pb-32">
-      {/* Divider */}
       <div className="flex items-center gap-4 mb-10 sm:mb-12">
         <div className="h-px flex-1 bg-rule" />
         <span className="text-xs tracking-widest uppercase text-faint font-medium">Recipes</span>
         <div className="h-px flex-1 bg-rule" />
       </div>
 
-      {/* Search */}
       <div className="max-w-content mx-auto mb-8 sm:mb-12">
         <div className="relative">
           <input
@@ -86,14 +82,13 @@ export default function RecipeGrid({
         </p>
       </div>
 
-      {/* Grid */}
       {filtered.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {filtered.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
-              clicks={clickMap[recipe.slug] ?? 0}
+              clicks={clickMap[recipe.url] ?? 0}
             />
           ))}
         </div>
