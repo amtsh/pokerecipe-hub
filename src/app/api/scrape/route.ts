@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decodeEntities } from "../../../lib/decode-entities";
+import { decodeEntities } from "../../../../lib/decode-entities";
 
 export interface ScrapeResult {
   slug: string;
@@ -71,25 +71,23 @@ export async function POST(req: NextRequest) {
       const html = await res.text();
       const metas = parseMetaTags(html);
 
-      // Prefer OG → Twitter → standard meta → <title> → slug-derived fallback
       name =
-        metas["og:title"]          ||
-        metas["twitter:title"]     ||
-        metas["title"]             ||
-        extractTitle(html)         ||
+        metas["og:title"]            ||
+        metas["twitter:title"]       ||
+        metas["title"]               ||
+        extractTitle(html)           ||
         name;
 
       description =
-        metas["og:description"]    ||
+        metas["og:description"]      ||
         metas["twitter:description"] ||
-        metas["description"]       ||
+        metas["description"]         ||
         description;
     }
   } catch {
     // Timeout, network error, or gated page — fall back to slug-derived values
   }
 
-  // Decode all HTML entities in the final strings before returning
   return NextResponse.json({
     slug,
     name:        decodeEntities(name.trim()),
@@ -98,12 +96,8 @@ export async function POST(req: NextRequest) {
   } as ScrapeResult);
 }
 
-// ── helpers ────────────────────────────────────────────────────────────────────────
+// ── helpers ──────────────────────────────────────────────────────────────
 
-/**
- * Parse every <meta> tag in the HTML into a { key: value } map.
- * Handles attributes in any order, self-closing tags, and mixed quote styles.
- */
 function parseMetaTags(html: string): Record<string, string> {
   const result: Record<string, string> = {};
   const tagRe = /<meta([^>]+?)\/?>/gi;
@@ -114,14 +108,12 @@ function parseMetaTags(html: string): Record<string, string> {
     const key   = attrVal(attrs, "property") || attrVal(attrs, "name");
     const value = attrVal(attrs, "content");
     if (key && value) {
-      // Store with lowercased key; apply entity decode at parse time
       result[key.toLowerCase()] = decodeEntities(value);
     }
   }
   return result;
 }
 
-/** Extract a single attribute value from a snippet of HTML attribute text. */
 function attrVal(attrs: string, name: string): string {
   const re = new RegExp(
     `\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,
