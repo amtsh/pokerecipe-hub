@@ -27,18 +27,22 @@ export default function RecipeCard({
     setTracking(true);
     setLocalClicks((n) => n + 1);
     try {
-      await fetch("/api/click", {
+      const res = await fetch("/api/click", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug: recipe.slug }),
       });
-    } catch { /* non-critical */ }
-    finally { setTracking(false); }
+      // If click tracking fails, silently revert the optimistic increment
+      if (!res.ok) setLocalClicks((n) => Math.max(0, n - 1));
+    } catch {
+      setLocalClicks((n) => Math.max(0, n - 1));
+    } finally {
+      setTracking(false);
+    }
   }
 
   return (
     <article className="group flex flex-col border border-rule rounded-2xl p-4 sm:p-6 bg-canvas hover:border-ink/20 hover:shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all duration-200">
-      {/* Tags */}
       {recipe.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
           {recipe.tags.map((tag) => (
@@ -52,13 +56,9 @@ export default function RecipeCard({
         </div>
       )}
 
-      {/* Name */}
       <h3 className="text-sm font-semibold text-ink leading-snug mb-2">{recipe.name}</h3>
-
-      {/* Description */}
       <p className="text-sm text-muted leading-relaxed flex-1 mb-5">{recipe.description}</p>
 
-      {/* Footer */}
       <div className="flex items-center justify-between pt-4 border-t border-rule">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <span className="text-xs text-faint truncate">by {recipe.author}</span>

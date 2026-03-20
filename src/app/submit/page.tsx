@@ -5,7 +5,7 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 
-type Phase = "input" | "loading" | "saving" | "done" | "error";
+type Phase = "input" | "loading" | "confirm" | "saving" | "done";
 
 interface ScrapedData {
   slug: string;
@@ -54,20 +54,28 @@ export default function SubmitPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed }),
       });
+      if (!res.ok) {
+        setPhase("input");
+        // Only surface safe validation messages from the scrape route
+        const data = await res.json().catch(() => ({}));
+        const msg  = typeof data?.error === "string" && data.error.length < 120
+          ? data.error
+          : "Something went wrong. Please try again.";
+        setError(msg);
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) { setPhase("input"); setError(data.error ?? "Something went wrong."); return; }
       setScraped(data as ScrapedData);
-      setPhase("input"); // re-use input phase to show confirm UI below
-      // Transition to confirm view — reuse a separate state
-      setPhase("saving" as Phase); // temp: use saving as "confirm ready"
+      setPhase("confirm");
     } catch {
       setPhase("input");
-      setError("Network error. Check your connection and try again.");
+      setError("Something went wrong. Please try again.");
     }
   }
 
   async function handleConfirm() {
     if (!scraped) return;
+    setError("");
     setPhase("saving");
     try {
       const res = await fetch("/api/recipes", {
@@ -75,26 +83,21 @@ export default function SubmitPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(scraped),
       });
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? "Failed to save recipe.");
-        setPhase("error");
+        setError("Something went wrong. Please try again.");
+        setPhase("confirm");
         return;
       }
       setPhase("done");
     } catch {
-      setError("Network error while saving. Please try again.");
-      setPhase("error");
+      setError("Something went wrong. Please try again.");
+      setPhase("confirm");
     }
   }
 
   function reset() {
     setUrl(""); setScraped(null); setError(""); setPhase("input");
   }
-
-  // "saving" is overloaded: after scrape succeeds, scraped != null means confirm screen
-  const showConfirm = phase === "saving" && scraped !== null && error === "";
-  const showInput   = phase === "input" || phase === "loading" || (phase === "saving" && !scraped) || phase === "error";
 
   return (
     <>
@@ -119,21 +122,24 @@ export default function SubmitPage() {
           )}
 
           {/* Confirm */}
-          {showConfirm && (
+          {phase === "confirm" && scraped && (
             <div className="space-y-6 sm:space-y-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink mb-2">Looks right?</h1>
                 <p className="text-sm text-muted">We pulled this from the recipe link. Confirm to submit.</p>
               </div>
               <div className="border border-rule rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
-                <Row label="Name"        value={scraped!.name        || "\u2014"} />
-                <Row label="Description" value={scraped!.description || "\u2014"} />
-                <Row label="Link"        value={scraped!.canonical}  isLink />
+                <Row label="Name"        value={scraped.name        || "\u2014"} />
+                <Row label="Description" value={scraped.description || "\u2014"} />
+                <Row label="Link"        value={scraped.canonical}  isLink />
               </div>
               {error && <p className="text-xs text-red-400">{error}</p>}
               <div className="flex flex-col sm:flex-row gap-3">
-                <button onClick={handleConfirm}
-                  className="flex-1 bg-ink text-white text-sm font-medium py-3 rounded-full hover:bg-muted transition-colors">
+                <button
+                  onClick={handleConfirm}
+                  disabled={phase === "saving" as unknown as boolean}
+                  className="flex-1 bg-ink text-white text-sm font-medium py-3 rounded-full hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
                   Submit
                 </button>
                 <button onClick={reset}
@@ -144,8 +150,25 @@ export default function SubmitPage() {
             </div>
           )}
 
-          {/* Input / loading / error */}
-          {showInput && (
+          {/* Saving spinner overlay on confirm */}
+          {phase === "saving" && scraped && (
+            <div className="space-y-6 sm:space-y-8">
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink mb-2">Submitting\u2026</h1>
+              </div>
+              <div className="border border-rule rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5 opacity-50">
+                <Row label="Name"        value={scraped.name        || "\u2014"} />
+                <Row label="Description" value={scraped.description || "\u2014"} />
+                <Row label="Link"        value={scraped.canonical}  isLink />
+              </div>
+              <div className="flex justify-center pt-2">
+                <Spinner className="h-5 w-5 text-muted" />
+              </div>
+            </div>
+          )}
+
+          {/* Input / loading */}
+          {(phase === "input" || phase === "loading") && (
             <div className="space-y-6 sm:space-y-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink mb-2">Submit a recipe</h1>
@@ -159,7 +182,6 @@ export default function SubmitPage() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-                {/* Input + Paste — stacks only below 360 px, side-by-side otherwise */}
                 <div className="flex items-stretch gap-2">
                   <input
                     ref={inputRef}
@@ -189,7 +211,9 @@ export default function SubmitPage() {
                   disabled={phase === "loading" || !url.trim()}
                   className="w-full bg-ink text-white text-sm font-medium py-3 rounded-full hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  {phase === "loading" ? <><Spinner /> Pulling recipe info&hellip;</> : "Continue"}
+                  {phase === "loading"
+                    ? <><Spinner className="h-3.5 w-3.5 text-white" /> Pulling recipe info&hellip;</>
+                    : "Continue"}
                 </button>
               </form>
             </div>
@@ -218,9 +242,14 @@ function Row({ label, value, isLink }: { label: string; value: string; isLink?: 
   );
 }
 
-function Spinner() {
+function Spinner({ className }: { className?: string }) {
   return (
-    <svg className="animate-spin h-3.5 w-3.5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <svg
+      className={`animate-spin ${className ?? "h-4 w-4"}`}
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
     </svg>
