@@ -11,7 +11,7 @@ interface ScrapedData {
   slug: string;
   name: string;
   description: string;
-  canonical: string;
+  canonical: string; // display only — not sent to DB
 }
 
 function isPokeRecipeUrl(s: string): boolean {
@@ -76,7 +76,7 @@ export default function SubmitPage() {
     setError("");
     setPhase("saving");
     try {
-      // Save slug + name + truncated description to DB
+      // Send slug + name + description only — url is NOT saved to DB
       const res = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -84,7 +84,6 @@ export default function SubmitPage() {
           slug:        scraped.slug,
           name:        scraped.name,
           description: scraped.description,
-          canonical:   scraped.canonical,
         }),
       });
       if (!res.ok) {

@@ -30,16 +30,17 @@ create table recipes (
   slug         text primary key,
   name         text not null,
   description  text,
-  url          text not null,
   clicks       integer not null default 0,
   submitted_at timestamptz not null default now()
 );
 
+-- url is NOT stored — derived as https://poke.com/r/<slug> on the frontend
+
 -- Atomic increment; auto-creates a minimal row on first click
-create function increment_clicks(recipe_slug text)
+create or replace function increment_clicks(recipe_slug text)
 returns void as $$
-  insert into recipes (slug, name, url, clicks)
-  values (recipe_slug, recipe_slug, 'https://poke.com/r/' || recipe_slug, 1)
+  insert into recipes (slug, name, clicks)
+  values (recipe_slug, recipe_slug, 1)
   on conflict (slug)
   do update set clicks = recipes.clicks + 1;
 $$ language sql;
@@ -56,19 +57,21 @@ create policy "public update" on recipes for update using (true);
 
 ### Submission flow
 1. User pastes a `poke.com/r/...` or `poke.com/refer/...` link on `/submit`.
-2. `POST /api/scrape` fetches og:title and og:description (truncated to 20 words) for the preview.
+2. `POST /api/scrape` fetches og:title (strips " – Poke" suffix) and og:description (truncated to 20 words).
 3. User reviews on a confirmation screen.
-4. `POST /api/recipes` saves `{ slug, name, description, url, clicks: 0 }` to Supabase.
+4. `POST /api/recipes` saves `{ slug, name, description }` — no url column.
 
 ### Homepage
-- `src/app/page.tsx` queries Supabase for the 10 most recently submitted recipes (`submitted_at DESC`).
-- Uses the cached `name` and `description` from the DB — no scraping at page-load time.
-- Falls back to 6 seed recipes if Supabase has no data yet.
+- Queries Supabase for the 10 most recently submitted recipes (`submitted_at DESC`).
+- URL for each card is derived client-side: `https://poke.com/r/${slug}`.
+- Falls back to 6 seed recipes if Supabase has no data.
 
 ### Click tracking
-- `POST /api/click { slug }` calls `increment_clicks(recipe_slug)` atomically.
-- `GET /api/click` returns `{ slug, clicks }` for all rows.
-- `RecipeCard` tracks by slug and optimistically increments the local counter.
+- `POST /api/click { slug }` → `increment_clicks(recipe_slug)` RPC.
+- `GET /api/click` returns `{ slug, clicks }` rows.
+
+### Search
+- `GET /api/recipes?q=...` runs `ilike` across name + description.
 
 ---
 
@@ -76,14 +79,14 @@ create policy "public update" on recipes for update using (true);
 
 ```
 lib/
-  supabase.ts                  -- lazy client
-  decode-entities.ts           -- HTML entity + JS unicode escape decoder
+  supabase.ts          -- lazy client
+  decode-entities.ts   -- HTML entity + unicode escape decoder
 src/app/
-  page.tsx                     -- server component, newest 10 from DB
+  page.tsx             -- server component, newest 10 from DB
   api/
-    click/route.ts             -- GET/POST by slug
-    recipes/route.ts           -- GET newest 10, POST new recipe
-    scrape/route.ts            -- POST metadata preview (20-word cap)
+    click/route.ts     -- GET/POST by slug
+    recipes/route.ts   -- GET (search), POST (save slug+name+desc)
+    scrape/route.ts    -- POST metadata preview, strips " - Poke" suffix
   submit/page.tsx
   components/
     Navbar, Hero, RecipeGrid, RecipeCard, Footer

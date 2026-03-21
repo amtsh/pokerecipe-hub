@@ -5,9 +5,8 @@ const ERR = { error: "Internal Server Error" };
 
 /**
  * GET /api/recipes?q=<optional search term>
- * Without q: returns 10 most recently submitted recipes.
- * With q:    full-text search across name and description (case-insensitive),
- *            up to 20 results, still ordered newest-first.
+ * Without q: 10 most recently submitted recipes.
+ * With q:    case-insensitive search across name + description, up to 20 results.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -23,7 +22,6 @@ export async function GET(req: NextRequest) {
       .limit(q ? 20 : 10);
 
     if (q) {
-      // ilike = case-insensitive LIKE; search both name and description
       queryBuilder = queryBuilder.or(
         `name.ilike.%${q}%,description.ilike.%${q}%`
       );
@@ -43,8 +41,9 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST /api/recipes  { slug, name, description, canonical }
- * Saves recipe metadata. Re-submitting an existing slug is a no-op.
+ * POST /api/recipes  { slug, name, description }
+ * Saves recipe metadata. url is NOT stored — derived from slug on the frontend.
+ * Re-submitting an existing slug is a no-op (ignoreDuplicates).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -55,13 +54,13 @@ export async function POST(req: NextRequest) {
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
 
-    const { slug, name, description, canonical } = body;
-    if (!slug || !canonical) {
+    const { slug, name, description } = body;
+    if (!slug) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
     const { error } = await sb.from("recipes").upsert(
-      { slug, name: name || slug, description: description || "", url: canonical, clicks: 0 },
+      { slug, name: name || slug, description: description || "", clicks: 0 },
       { onConflict: "slug", ignoreDuplicates: true }
     );
 

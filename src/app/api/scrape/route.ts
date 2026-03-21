@@ -5,7 +5,7 @@ export interface ScrapeResult {
   slug: string;
   name: string;
   description: string;
-  canonical: string;
+  canonical: string; // for display on confirm screen only — not saved to DB
 }
 
 /**
@@ -14,7 +14,7 @@ export interface ScrapeResult {
  *
  * Returns scraped metadata for the submit-page preview.
  * Description is truncated to the first 20 words.
- * This data is used for display only; persistence is handled by /api/recipes.
+ * Name has any trailing " – Poke" or " - Poke" suffix stripped.
  */
 export async function POST(req: NextRequest) {
   let url: string | undefined;
@@ -82,14 +82,22 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     slug,
-    name:        decodeEntities(name.trim()),
-    // Truncate to first 20 words before storing or displaying
+    name:        stripPokeSuffix(decodeEntities(name.trim())),
     description: truncateWords(decodeEntities(description.trim()), 20),
     canonical,
   } as ScrapeResult);
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
+
+/**
+ * Strip trailing " – Poke" or " - Poke" (any dash variant, case-insensitive).
+ * Handles both the em dash (–/\u2013) and regular hyphen.
+ * e.g. "Flight Deals Tracker – Poke" → "Flight Deals Tracker"
+ */
+function stripPokeSuffix(s: string): string {
+  return s.replace(/\s*[\u2013\u2014-]\s*Poke\s*$/i, "").trim();
+}
 
 /** Trim to the first n words, appending \u2026 if truncated. */
 function truncateWords(s: string, n: number): string {
