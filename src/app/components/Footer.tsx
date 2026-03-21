@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="px-6 pt-6 pb-40">
       <div className="max-w-wide mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-faint dark:text-darkFaint">
-          pokerecipe<span className="opacity-40">.book</span>
+          pokerecipebook<span className="opacity-40">.com</span>
         </p>
         <p className="text-xs text-faint dark:text-darkFaint">
           Recipes link to{" "}

@@ -17,7 +17,7 @@ interface AdminRecipe {
   approved: boolean;
 }
 
-const REPLY_TEXT = encodeURIComponent("Just added this to pokerecipe.book");
+const REPLY_TEXT = encodeURIComponent("Just added this to pokerecipebook.com");
 function tweetIntentUrl(tweetId: string) {
   return `https://twitter.com/intent/tweet?in_reply_to=${tweetId}&text=${REPLY_TEXT}`;
 }
@@ -132,7 +132,6 @@ export default function AdminPage() {
     const snapshot = pending.find((r) => r.slug === slug) ?? null;
     setPending((p) => p.filter((r) => r.slug !== slug));
     try {
-      // Approve also clears tweet_id — moves to Manage
       const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -150,14 +149,14 @@ export default function AdminPage() {
     }
   }
 
-  // ─ Reply (already-live recipe with tweet — open intent + acknowledge) ─────────────
+  // ─ Reply (already-live recipe with tweet \u2014 open intent + acknowledge) ─────────────
   async function handleReplyAndAcknowledge(slug: string, name: string, tweetId: string) {
     if (!pin) return;
     window.open(tweetIntentUrl(tweetId), "_blank", "noopener,noreferrer");
     await acknowledge(slug, name, `Replied to tweet \u2014 \u201c${name}\u201d moved to Manage.`);
   }
 
-  // ─ Dismiss (already-live recipe — just acknowledge, no reply) ──────────────────
+  // ─ Dismiss (already-live recipe \u2014 just acknowledge, no reply) ──────────────────
   async function handleDismiss(slug: string, name: string) {
     if (!pin) return;
     await acknowledge(slug, name, `\u201c${name}\u201d dismissed to Manage.`);
@@ -177,7 +176,6 @@ export default function AdminPage() {
         if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
         flash("Action failed \u2014 please try again."); return;
       }
-      // Add to Manage with tweet_id cleared (since acknowledge nullifies it)
       if (snapshot) setManaged((m) => [{ ...snapshot, tweet_id: null }, ...m]);
       flash(successMsg);
     } catch {
@@ -327,7 +325,6 @@ export default function AdminPage() {
                               className="font-medium text-ink dark:text-white hover:opacity-60 transition-opacity leading-snug">
                               {r.name}
                             </a>
-                            {/* Green "Live" badge for auto-approved recipes sitting in pending */}
                             {isLivePending && (
                               <span className="text-[0.6rem] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0">
                                 Live
@@ -360,7 +357,6 @@ export default function AdminPage() {
                           <div className="flex items-center gap-2 justify-end">
 
                             {isLivePending ? (
-                              // Already live — just needs reply/dismiss acknowledgment
                               <>
                                 {r.tweet_id && (
                                   <button
@@ -378,7 +374,6 @@ export default function AdminPage() {
                                 </button>
                               </>
                             ) : tab === "pending" ? (
-                              // Not yet approved — needs approval
                               r.tweet_id ? (
                                 <button
                                   onClick={() => handleReplyApprove(r.slug, r.name, r.tweet_id!)}
@@ -395,11 +390,9 @@ export default function AdminPage() {
                                 </button>
                               )
                             ) : (
-                              // Manage tab — no primary action needed
                               null
                             )}
 
-                            {/* Reject/Delete button */}
                             {!isLivePending && (
                               <button
                                 onClick={() => handleDelete(r.slug, r.name)}

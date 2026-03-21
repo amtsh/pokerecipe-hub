@@ -5,7 +5,7 @@ import "./globals.css";
 /**
  * Canonical site URL.
  * Falls back through Vercel env vars to the known production alias.
- * Once pokerecipe.book DNS is pointed at this Vercel project, update here.
+ * Once pokerecipebook.com DNS is pointed at this Vercel project, update here.
  */
 const SITE_URL =
   process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -17,14 +17,14 @@ const SITE_URL =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default:  "pokerecipe.book",
-    template: "%s | pokerecipe.book",
+    default:  "pokerecipebook.com",
+    template: "%s | pokerecipebook.com",
   },
   description:
     "The community-powered index for Poke automation recipes. Discover, share, and track the most useful automations.",
   openGraph: {
-    siteName:    "pokerecipe.book",
-    title:       "pokerecipe.book",
+    siteName:    "pokerecipebook.com",
+    title:       "pokerecipebook.com",
     description: "The community-powered index for Poke automation recipes. Discover, share, and track the most useful automations.",
     type:        "website",
     locale:      "en_US",
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
   twitter: {
     card:        "summary_large_image",
     site:        "@interaction",
-    title:       "pokerecipe.book",
+    title:       "pokerecipebook.com",
     description: "The community-powered index for Poke automation recipes.",
   },
   robots: { index: true, follow: true },

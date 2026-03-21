@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime     = "edge";
-export const alt         = "pokerecipe.book — community-powered Poke automation recipes";
+export const alt         = "pokerecipebook.com \u2014 community-powered Poke automation recipes";
 export const size        = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -44,7 +44,7 @@ export default async function Image() {
         {/* Title */}
         <div
           style={{
-            fontSize: 82,
+            fontSize: 76,
             fontWeight: 600,
             color: "#0a0a0a",
             letterSpacing: "-0.04em",
@@ -53,7 +53,7 @@ export default async function Image() {
             display: "flex",
           }}
         >
-          pokerecipe.book
+          pokerecipebook.com
         </div>
 
         {/* Subtext */}

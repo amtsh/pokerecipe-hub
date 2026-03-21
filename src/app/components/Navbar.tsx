@@ -9,7 +9,7 @@ export default function Navbar() {
           href="/"
           className="text-sm font-semibold tracking-tight text-ink dark:text-white hover:opacity-60 transition-opacity"
         >
-          pokerecipe<span className="text-muted dark:text-darkMuted font-normal">.book</span>
+          pokerecipebook<span className="text-muted dark:text-darkMuted font-normal">.com</span>
         </Link>
 
         <nav className="flex items-center gap-3 sm:gap-4">
