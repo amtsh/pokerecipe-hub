@@ -22,7 +22,6 @@ export default function RecipeCard({
   clicks?: number;
 }) {
   const pokeUrl  = `https://poke.com/r/${recipe.slug}`;
-  // Correct OG image endpoint for Poke recipes
   const ogImgUrl = `https://poke.com/r/${recipe.slug}/og`;
 
   const [localClicks, setLocalClicks] = useState(clicks);
@@ -50,47 +49,31 @@ export default function RecipeCard({
   return (
     <article className="group flex flex-col bg-white dark:bg-darkSurface rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] overflow-hidden border border-rule/60 dark:border-darkBorder transition-shadow duration-200 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_6px_32px_rgba(0,0,0,0.6)]">
 
-      {/* ─── Polaroid frame — equal side/top padding, wider bottom strip ─── */}
+      {/* Polaroid frame */}
       <div className="relative px-3 pt-3 pb-7 bg-white dark:bg-darkSurface">
-
-        {/* Featured stamp — top-left corner over image */}
         {recipe.featured && (
           <span className="absolute top-5 left-5 z-10 text-[0.55rem] tracking-widest uppercase font-bold bg-ink/85 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-full">
             &#9733; Featured
           </span>
         )}
 
-        {/* Image container */}
         <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-lift dark:bg-darkInput">
-
-          {/* Shimmer skeleton */}
           {imgState === "loading" && (
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute inset-0 bg-lift dark:bg-darkInput" />
               <div
                 className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_ease-in-out_infinite]"
-                style={{
-                  background:
-                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
-                }}
+                style={{ background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)" }}
               />
             </div>
           )}
 
-          {/* Branded placeholder when image fails */}
           {imgState === "error" && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span
-                className="text-5xl font-semibold select-none"
-                style={{ color: "#e8e8e8" }}
-                aria-hidden
-              >
-                p
-              </span>
+              <span className="text-5xl font-semibold select-none" style={{ color: "#e8e8e8" }} aria-hidden>p</span>
             </div>
           )}
 
-          {/* OG image */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={ogImgUrl}
@@ -104,29 +87,24 @@ export default function RecipeCard({
         </div>
       </div>
 
-      {/* ─── Caption area (below the polaroid strip) ─── */}
+      {/* Caption */}
       <div className="flex flex-col flex-1 px-4 pb-4 -mt-1">
-        {/* Name */}
         <h3 className="text-sm font-semibold text-ink dark:text-white leading-snug mb-1.5">
           {recipe.name}
         </h3>
 
-        {/* Description */}
         {recipe.description && (
           <p className="text-xs text-muted dark:text-darkMuted leading-relaxed mb-4 line-clamp-2">
             {recipe.description}
           </p>
         )}
 
-        {/* Footer */}
         <div className="flex items-center justify-between pt-3 border-t border-rule dark:border-darkBorder mt-auto">
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[0.65rem] text-faint dark:text-darkFaint">
-              by {recipe.author}
-            </span>
+            <span className="text-[0.65rem] text-faint dark:text-darkFaint">by {recipe.author}</span>
             {localClicks > 0 && (
               <span className="text-[0.65rem] text-faint dark:text-darkFaint">
-                {localClicks.toLocaleString()} add{localClicks !== 1 ? "s" : ""}
+                {localClicks.toLocaleString()} view{localClicks !== 1 ? "s" : ""}
               </span>
             )}
           </div>
@@ -137,7 +115,7 @@ export default function RecipeCard({
             onClick={handleAddToPoke}
             className="shrink-0 ml-3 text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 sm:px-4 py-2 rounded-full hover:opacity-75 transition-opacity"
           >
-            Add to Poke
+            View Recipe
           </a>
         </div>
       </div>
