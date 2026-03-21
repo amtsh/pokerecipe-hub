@@ -34,12 +34,10 @@ export async function GET(req: NextRequest) {
       qb = qb.order("featured",     { ascending: false });
       qb = qb.order("submitted_at", { ascending: false });
     } else {
-      // default: popular (clicks DESC)
       qb = qb.order("clicks", { ascending: false });
     }
 
     const { data, error } = await qb;
-
     if (error) {
       console.error("[/api/recipes GET]", error.message);
       return NextResponse.json(ERR, { status: 500 });
@@ -52,7 +50,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST /api/recipes  { slug, name, description, category? }
+ * POST /api/recipes  { slug, name, description, category?, tweet_id? }
  * Inserts with approved=false (requires admin approval).
  */
 export async function POST(req: NextRequest) {
@@ -64,7 +62,7 @@ export async function POST(req: NextRequest) {
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
 
-    const { slug, name, description, category } = body;
+    const { slug, name, description, category, tweet_id } = body;
     if (!slug) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
     const row: Record<string, unknown> = {
@@ -74,7 +72,8 @@ export async function POST(req: NextRequest) {
       clicks:      0,
       approved:    false,
     };
-    if (category) row.category = category;
+    if (category) row.category  = category;
+    if (tweet_id) row.tweet_id  = tweet_id;
 
     const { error } = await sb.from("recipes").upsert(row, {
       onConflict:       "slug",

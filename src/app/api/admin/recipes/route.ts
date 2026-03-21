@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await sb
       .from("recipes")
-      .select("slug, name, description, category, clicks, submitted_at")
+      .select("slug, name, description, category, clicks, submitted_at, tweet_id")
       .eq("approved", approved)
       .order("submitted_at", { ascending: false });
 
