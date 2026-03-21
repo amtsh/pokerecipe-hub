@@ -4,7 +4,7 @@ import RecipeGrid   from "./components/RecipeGrid";
 import WhatIsPoke   from "./components/WhatIsPoke";
 import Footer       from "./components/Footer";
 import type { Recipe } from "./components/RecipeCard";
-import { getSupabase }  from "../../lib/supabase";
+import { getSupabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,7 @@ async function getTopRecipes(): Promise<{
     const { data, error } = await sb
       .from("recipes")
       .select("slug, name, description, clicks, featured, category")
+      .eq("approved", true)
       .order("featured",     { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(10);

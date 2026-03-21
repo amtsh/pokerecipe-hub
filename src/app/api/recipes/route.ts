@@ -5,10 +5,7 @@ const ERR = { error: "Internal Server Error" };
 
 /**
  * GET /api/recipes?q=&category=&sort=newest|popular
- * - No params:  10 newest (featured first)
- * - q:          ilike search across name + description
- * - category:   exact match on category column
- * - sort=popular: order by clicks DESC
+ * Only returns approved recipes.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -24,6 +21,7 @@ export async function GET(req: NextRequest) {
     let qb = sb
       .from("recipes")
       .select("slug, name, description, clicks, featured, category")
+      .eq("approved", true)
       .limit(isFiltered ? 20 : 10);
 
     if (q)        qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
@@ -32,7 +30,7 @@ export async function GET(req: NextRequest) {
     if (sort === "popular") {
       qb = qb.order("clicks", { ascending: false });
     } else {
-      qb = qb.order("featured", { ascending: false });
+      qb = qb.order("featured",     { ascending: false });
       qb = qb.order("submitted_at", { ascending: false });
     }
 
@@ -49,7 +47,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/** POST /api/recipes  { slug, name, description, category? } */
+/**
+ * POST /api/recipes  { slug, name, description, category? }
+ * Inserts with approved=false (requires admin approval before appearing on homepage).
+ */
 export async function POST(req: NextRequest) {
   try {
     const sb = getSupabase();
@@ -67,11 +68,12 @@ export async function POST(req: NextRequest) {
       name:        name        || slug,
       description: description || "",
       clicks:      0,
+      approved:    false,   // requires admin approval
     };
     if (category) row.category = category;
 
     const { error } = await sb.from("recipes").upsert(row, {
-      onConflict: "slug",
+      onConflict:       "slug",
       ignoreDuplicates: true,
     });
 
