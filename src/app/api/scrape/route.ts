@@ -5,16 +5,15 @@ export interface ScrapeResult {
   slug: string;
   name: string;
   description: string;
-  canonical: string; // for display on confirm screen only — not saved to DB
+  canonical: string;
 }
 
 /**
  * POST /api/scrape
  * Body: { url: string }  — poke.com/r/<slug> or poke.com/refer/<slug>
  *
- * Returns scraped metadata for the submit-page preview.
- * Description is truncated to the first 20 words.
- * Name has any trailing " – Poke" or " - Poke" suffix stripped.
+ * Validates that the recipe is actually published on the Poke platform before
+ * returning metadata. Recipes with status 'pending_review' or missing are rejected.
  */
 export async function POST(req: NextRequest) {
   let url: string | undefined;
@@ -63,21 +62,47 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(6000),
     });
 
-    if (res.ok) {
-      const html  = await res.text();
-      const metas = parseMetaTags(html);
-      name =
-        metas["og:title"]        ||
-        metas["twitter:title"]   ||
-        metas["title"]           ||
-        extractTitle(html)       ||
-        name;
-      description =
-        metas["og:description"]      ||
-        metas["twitter:description"] ||
-        metas["description"]         ||
-        description;
+    // Recipe doesn't exist on Poke at all
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "This recipe couldn\u2019t be found on the Poke platform." },
+        { status: 422 }
+      );
     }
+
+    const html = await res.text();
+
+    // Verify the recipe is published on the Poke platform.
+    // The RSC payload embeds: \"isInternal\":(true|false),\"status\":\"<value>\"
+    const pokeStatus = extractPokeStatus(html);
+
+    if (pokeStatus === "pending_review") {
+      return NextResponse.json(
+        { error: "This recipe is still pending review on the Poke platform and can\u2019t be submitted yet. Try again once it\u2019s published." },
+        { status: 422 }
+      );
+    }
+
+    if (pokeStatus !== null && pokeStatus !== "published") {
+      return NextResponse.json(
+        { error: "This recipe isn\u2019t currently published on the Poke platform." },
+        { status: 422 }
+      );
+    }
+
+    // pokeStatus === "published" or null (couldn't parse — allow with fallback)
+    const metas = parseMetaTags(html);
+    name =
+      metas["og:title"]        ||
+      metas["twitter:title"]   ||
+      metas["title"]           ||
+      extractTitle(html)       ||
+      name;
+    description =
+      metas["og:description"]      ||
+      metas["twitter:description"] ||
+      metas["description"]         ||
+      description;
   } catch { /* timeout or gated page — fall back to slug-derived values */ }
 
   return NextResponse.json({
@@ -91,15 +116,23 @@ export async function POST(req: NextRequest) {
 // ── helpers ────────────────────────────────────────────────────────────────────
 
 /**
- * Strip trailing " – Poke" or " - Poke" (any dash variant, case-insensitive).
- * Handles both the em dash (–/\u2013) and regular hyphen.
- * e.g. "Flight Deals Tracker – Poke" → "Flight Deals Tracker"
+ * Extract the Poke platform status from the RSC payload embedded in the page HTML.
+ *
+ * In the raw HTML, the recipe data object appears inside self.__next_f.push([1,"..."]) with
+ * escaped quotes: \"isInternal\":(true|false),\"status\":\"published\"
+ * The isInternal anchor ensures we match the recipe data object specifically.
+ *
+ * Returns the status string (e.g. "published", "pending_review") or null if not found.
  */
+export function extractPokeStatus(html: string): string | null {
+  const m = html.match(/\\"isInternal\\":(true|false),\\"status\\":\\"([a-z_]+)\\"/);
+  return m ? m[2] : null;
+}
+
 function stripPokeSuffix(s: string): string {
   return s.replace(/\s*[\u2013\u2014-]\s*Poke\s*$/i, "").trim();
 }
 
-/** Trim to the first n words, appending \u2026 if truncated. */
 function truncateWords(s: string, n: number): string {
   if (!s) return s;
   const words = s.trim().split(/\s+/);
