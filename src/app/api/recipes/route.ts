@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase, getSupabaseAdmin } from "../../../../lib/supabase";
+import { extractPokeStatus } from "../../../../lib/poke-status";
 
 const ERR      = { error: "Internal Server Error" };
 const PAGE_MAX = 50;
@@ -58,8 +59,10 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/recipes  { slug, name, description, category?, tweet_id? }
- * Inserts with approved=false (requires admin approval).
- * Uses admin client so the insert always succeeds regardless of RLS.
+ *
+ * Checks the recipe's Poke platform status server-side:
+ *  - published  → inserts with approved=true (skips admin queue, goes live immediately)
+ *  - anything else / timeout → inserts with approved=false (queued for admin review)
  */
 export async function POST(req: NextRequest) {
   try {
@@ -73,12 +76,31 @@ export async function POST(req: NextRequest) {
     const { slug, name, description, category, tweet_id } = body;
     if (!slug) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
+    // Server-side Poke status check — published recipes go live immediately.
+    // This cannot be spoofed via the request body.
+    let approved = false;
+    try {
+      const pokeRes = await fetch(`https://poke.com/r/${slug}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (pokeRes.ok) {
+        const html = await pokeRes.text();
+        if (extractPokeStatus(html) === "published") approved = true;
+      }
+    } catch {
+      // Network timeout or error — fall back to admin review queue
+      console.warn(`[/api/recipes POST] Poke status check failed for ${slug}, defaulting to unapproved`);
+    }
+
     const row: Record<string, unknown> = {
       slug,
       name:        name        || slug,
       description: description || "",
       clicks:      0,
-      approved:    false,
+      approved,
     };
     if (category) row.category = titleCase(category);
     if (tweet_id) row.tweet_id = tweet_id;
@@ -92,7 +114,7 @@ export async function POST(req: NextRequest) {
       console.error("[/api/recipes POST]", error.message);
       return NextResponse.json(ERR, { status: 500 });
     }
-    return NextResponse.json({ ok: true }, {
+    return NextResponse.json({ ok: true, approved }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (e) {

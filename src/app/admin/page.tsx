@@ -103,12 +103,6 @@ export default function AdminPage() {
     } finally { setPinLoading(false); }
   }
 
-  /**
-   * Approve a pending recipe.
-   * - Captures the item from pending state before removing it.
-   * - On success: removes from pending AND prepends to managed (no tab-switch re-fetch needed).
-   * - On failure: restores item to pending using the captured snapshot (no fetchData call).
-   */
   async function handleApprove(slug: string, name: string) {
     if (!pin) return;
     const snapshot = pending.find((r) => r.slug === slug) ?? null;
@@ -124,7 +118,6 @@ export default function AdminPage() {
         flash("Approval failed \u2014 please try again.");
         return;
       }
-      // Move the item into managed state immediately
       if (snapshot) setManaged((prev) => [snapshot, ...prev]);
       flash(`\u201c${name}\u201d approved and live on homepage.`);
     } catch {
@@ -133,13 +126,8 @@ export default function AdminPage() {
     }
   }
 
-  /**
-   * Reply & Approve: opens Twitter Web Intent immediately (must be synchronous before any await),
-   * then approves in the background using the same state-sync pattern as handleApprove.
-   */
   async function handleReplyApprove(slug: string, name: string, tweetId: string) {
     if (!pin) return;
-    // Open intent BEFORE any await — browsers block window.open after async gaps
     window.open(tweetIntentUrl(tweetId), "_blank", "noopener,noreferrer");
     const snapshot = pending.find((r) => r.slug === slug) ?? null;
     setPending((prev) => prev.filter((r) => r.slug !== slug));
@@ -162,13 +150,6 @@ export default function AdminPage() {
     }
   }
 
-  /**
-   * Delete (reject) a recipe.
-   * - Captures snapshots before removing from both lists.
-   * - On success: item stays gone, flash shown.
-   * - On failure: restores only the specific item using captured snapshots.
-   * Never calls fetchData — avoids the "disappear then reappear" bug.
-   */
   async function handleDelete(slug: string, name: string) {
     if (!pin) return;
     if (!confirm(`Delete \u201c${name}\u201d? This cannot be undone.`)) return;
@@ -211,7 +192,6 @@ export default function AdminPage() {
 
   const displayed = tab === "pending" ? pending : managed;
 
-  // ── PIN screen ────────────────────────────────────────────────────────────
   if (!authed) {
     return (
       <>
@@ -239,7 +219,6 @@ export default function AdminPage() {
     );
   }
 
-  // ── Admin content ────────────────────────────────────────────────────────────
   return (
     <>
       <Navbar />
@@ -333,6 +312,8 @@ export default function AdminPage() {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-2 justify-end">
+
+                          {/* Pending tab — Reply & Approve (tweet) or Approve (manual) */}
                           {tab === "pending" && (
                             r.tweet_id ? (
                               <button
@@ -350,12 +331,26 @@ export default function AdminPage() {
                               </button>
                             )
                           )}
+
+                          {/* Manage tab — Reply button for tweet-sourced recipes */}
+                          {tab === "manage" && r.tweet_id && (
+                            <a
+                              href={tweetIntentUrl(r.tweet_id)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+                            >
+                              Reply
+                            </a>
+                          )}
+
                           <button
                             onClick={() => handleDelete(r.slug, r.name)}
                             className="text-xs font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-3 py-1.5 rounded-full hover:border-red-300 dark:hover:border-red-700 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                           >
                             {tab === "pending" ? "Reject" : "Delete"}
                           </button>
+
                         </div>
                       </td>
                     </tr>

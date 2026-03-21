@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeEntities } from "../../../../lib/decode-entities";
+import { extractPokeStatus } from "../../../../lib/poke-status";
 
 export interface ScrapeResult {
   slug: string;
@@ -62,7 +63,6 @@ export async function POST(req: NextRequest) {
       signal: AbortSignal.timeout(6000),
     });
 
-    // Recipe doesn't exist on Poke at all
     if (!res.ok) {
       return NextResponse.json(
         { error: "This recipe couldn\u2019t be found on the Poke platform." },
@@ -70,10 +70,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const html = await res.text();
-
-    // Verify the recipe is published on the Poke platform.
-    // The RSC payload embeds: \"isInternal\":(true|false),\"status\":\"<value>\"
+    const html       = await res.text();
     const pokeStatus = extractPokeStatus(html);
 
     if (pokeStatus === "pending_review") {
@@ -90,7 +87,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // pokeStatus === "published" or null (couldn't parse — allow with fallback)
     const metas = parseMetaTags(html);
     name =
       metas["og:title"]        ||
@@ -114,18 +110,6 @@ export async function POST(req: NextRequest) {
 }
 
 // ── helpers ────────────────────────────────────────────────────────────────────
-
-/**
- * Extract the Poke platform status from the RSC payload embedded in the page HTML.
- * The RSC payload has the recipe data with escaped quotes:
- *   \"isInternal\":(true|false),\"status\":\"<value>\"
- * The isInternal anchor ensures we match the recipe data object specifically.
- * NOT exported — route files must only export HTTP handlers and config constants.
- */
-function extractPokeStatus(html: string): string | null {
-  const m = html.match(/\\"isInternal\\":(true|false),\\"status\\":\\"([a-z_]+)\\"/);
-  return m ? m[2] : null;
-}
 
 function stripPokeSuffix(s: string): string {
   return s.replace(/\s*[\u2013\u2014-]\s*Poke\s*$/i, "").trim();
