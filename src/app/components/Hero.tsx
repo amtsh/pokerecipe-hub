@@ -5,7 +5,7 @@ export default function Hero() {
         <p className="text-[0.6rem] tracking-[0.22em] uppercase text-faint dark:text-darkFaint mb-7 font-medium">
           Community
         </p>
-        <h1 className="text-[2.25rem] sm:text-[2.85rem] leading-[1.07] tracking-[-0.05em] font-semibold text-ink dark:text-white mb-4">
+        <h1 className="text-[1.85rem] sm:text-[2.25rem] leading-[1.08] tracking-[-0.05em] font-semibold text-ink dark:text-white mb-4">
           Recipes for Poke.
         </h1>
         <p className="text-xs sm:text-sm text-muted dark:text-darkMuted leading-relaxed max-w-xs sm:max-w-sm mx-auto">

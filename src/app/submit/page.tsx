@@ -2,8 +2,9 @@
 
 import { useState, useRef, type FormEvent } from "react";
 import Link from "next/link";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar    from "../components/Navbar";
+import Footer    from "../components/Footer";
+import RecipeCard from "../components/RecipeCard";
 
 type Phase = "input" | "loading" | "confirm" | "saving" | "done";
 
@@ -63,7 +64,6 @@ export default function SubmitPage() {
         setPhase("input");
         return;
       }
-      // decodeEntities is applied server-side in /api/scrape before this data arrives
       setScraped(await res.json() as ScrapedData);
       setPhase("confirm");
     } catch {
@@ -115,49 +115,62 @@ export default function SubmitPage() {
             &larr; Back
           </Link>
 
-          {/* Done */}
+          {/* ── Done ────────────────────────────────────────────────── */}
           {phase === "done" && (
-            <div className="border border-rule dark:border-darkBorder rounded-2xl p-8 sm:p-10 text-center">
+            <div className="text-center py-10">
               <p className="text-sm font-medium text-ink dark:text-white mb-2">Recipe submitted.</p>
-              <p className="text-sm text-muted dark:text-darkMuted mb-8">
+              <p className="text-xs text-muted dark:text-darkMuted mb-8">
                 Thank you &mdash; it will appear after a quick review.
               </p>
               <button
                 onClick={reset}
-                className="text-sm text-ink dark:text-white underline underline-offset-2 hover:text-muted dark:hover:text-darkMuted transition-colors"
+                className="text-xs text-ink dark:text-white underline underline-offset-2 hover:opacity-60 transition-opacity"
               >
                 Submit another
               </button>
             </div>
           )}
 
-          {/* Confirm */}
+          {/* ── Confirm: RecipeCard preview ────────────────────────── */}
           {phase === "confirm" && scraped && (
             <div className="space-y-6 sm:space-y-8">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink dark:text-white mb-2">
+                <h1 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-1.5">
                   Looks right?
                 </h1>
-                <p className="text-sm text-muted dark:text-darkMuted">
-                  We pulled this from your link. Confirm to submit.
+                <p className="text-xs text-muted dark:text-darkMuted">
+                  This is exactly how it will appear on the grid.
                 </p>
               </div>
-              <div className="border border-rule dark:border-darkBorder rounded-2xl p-4 sm:p-6 space-y-4 sm:space-y-5">
-                <Row label="Name"        value={scraped.name        || "\u2014"} />
-                <Row label="Description" value={scraped.description || "\u2014"} />
-                <Row label="Link"        value={scraped.canonical}  isLink />
+
+              {/* Card preview — constrained width to match grid proportions */}
+              <div className="w-full max-w-[340px] sm:max-w-[380px]">
+                <RecipeCard
+                  recipe={{
+                    id:          "preview",
+                    name:        scraped.name,
+                    description: scraped.description,
+                    slug:        scraped.slug,
+                    author:      "",
+                    tags:        [],
+                    featured:    false,
+                  }}
+                  clicks={0}
+                />
               </div>
+
               {error && <p className="text-xs text-red-400">{error}</p>}
-              <div className="flex flex-col sm:flex-row gap-3">
+
+              <div className="flex flex-col sm:flex-row gap-3 max-w-[380px]">
                 <button
                   onClick={handleConfirm}
-                  className="flex-1 bg-ink text-white dark:bg-white dark:text-ink text-sm font-medium py-3 rounded-full hover:opacity-80 transition-opacity flex items-center justify-center"
+                  className="flex-1 bg-ink text-white dark:bg-white dark:text-ink text-xs font-medium py-3 rounded-full hover:opacity-80 transition-opacity flex items-center justify-center"
                 >
                   Submit
                 </button>
                 <button
                   onClick={reset}
-                  className="flex-1 border border-rule dark:border-darkBorder text-sm text-muted dark:text-darkMuted py-3 rounded-full hover:border-ink/30 dark:hover:border-white/20 transition-colors"
+                  className="flex-1 border border-rule dark:border-darkBorder text-xs text-muted dark:text-darkMuted py-3 rounded-full hover:border-ink/30 dark:hover:border-white/20 transition-colors"
                 >
                   Start over
                 </button>
@@ -165,28 +178,28 @@ export default function SubmitPage() {
             </div>
           )}
 
-          {/* Saving */}
+          {/* ── Saving ──────────────────────────────────────────────── */}
           {phase === "saving" && (
             <div className="flex flex-col items-center gap-4 py-16">
               <Spinner className="h-5 w-5 text-muted dark:text-darkMuted" />
-              <p className="text-sm text-muted dark:text-darkMuted">Submitting&hellip;</p>
+              <p className="text-xs text-muted dark:text-darkMuted">Submitting&hellip;</p>
             </div>
           )}
 
-          {/* Input / loading */}
+          {/* ── Input / Loading ───────────────────────────────────────── */}
           {(phase === "input" || phase === "loading") && (
             <div className="space-y-6 sm:space-y-8">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.03em] text-ink dark:text-white mb-2">
+                <h1 className="text-xl font-semibold tracking-tight text-ink dark:text-white mb-2">
                   Submit a recipe
                 </h1>
-                <p className="text-sm text-muted dark:text-darkMuted leading-relaxed">
+                <p className="text-xs text-muted dark:text-darkMuted leading-relaxed">
                   Paste a{" "}
-                  <code className="font-mono text-xs bg-lift dark:bg-darkInput text-ink dark:text-white px-1.5 py-0.5 rounded">
+                  <code className="font-mono bg-lift dark:bg-darkInput text-ink dark:text-white px-1.5 py-0.5 rounded">
                     poke.com/r/&hellip;
                   </code>
                   {" "}or{" "}
-                  <code className="font-mono text-xs bg-lift dark:bg-darkInput text-ink dark:text-white px-1.5 py-0.5 rounded">
+                  <code className="font-mono bg-lift dark:bg-darkInput text-ink dark:text-white px-1.5 py-0.5 rounded">
                     poke.com/refer/&hellip;
                   </code>
                   {" "}link.
@@ -221,13 +234,23 @@ export default function SubmitPage() {
                 <button
                   type="submit"
                   disabled={phase === "loading" || !url.trim()}
-                  className="w-full bg-ink text-white dark:bg-white dark:text-ink text-sm font-medium py-3 rounded-full hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full bg-ink text-white dark:bg-white dark:text-ink text-xs font-medium py-3 rounded-full hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
                   {phase === "loading"
                     ? <><Spinner className="h-3.5 w-3.5" /> Pulling recipe info&hellip;</>
                     : "Continue"}
                 </button>
               </form>
+
+              {/* Live skeleton preview while scraping */}
+              {phase === "loading" && (
+                <div className="w-full max-w-[340px] sm:max-w-[380px] animate-pulse pt-4">
+                  <div className="aspect-video w-full rounded-2xl sm:rounded-3xl bg-lift dark:bg-darkInput mb-3" />
+                  <div className="h-3.5 bg-lift dark:bg-darkInput rounded-full w-2/3 mb-2" />
+                  <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full mb-1.5" />
+                  <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
+                </div>
+              )}
             </div>
           )}
 
@@ -235,28 +258,6 @@ export default function SubmitPage() {
       </main>
       <Footer />
     </>
-  );
-}
-
-function Row({ label, value, isLink }: { label: string; value: string; isLink?: boolean }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[0.65rem] tracking-widest uppercase font-medium text-faint dark:text-darkFaint">
-        {label}
-      </span>
-      {isLink ? (
-        <a
-          href={value}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-sm text-ink dark:text-white underline underline-offset-2 hover:text-muted dark:hover:text-darkMuted transition-colors break-all"
-        >
-          {value}
-        </a>
-      ) : (
-        <p className="text-sm text-ink dark:text-white leading-relaxed">{value}</p>
-      )}
-    </div>
   );
 }
 
