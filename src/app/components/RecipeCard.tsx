@@ -22,13 +22,14 @@ export default function RecipeCard({
   clicks?: number;
 }) {
   const pokeUrl  = `https://poke.com/r/${recipe.slug}`;
-  const ogImgUrl = `https://poke.com/r/${recipe.slug}/og`;
+  // Correct OG image URL — Next.js file-based metadata route (confirmed from live page source)
+  const ogImgUrl = `https://poke.com/r/${recipe.slug}/opengraph-image`;
 
   const [localClicks, setLocalClicks] = useState(clicks);
   const [tracking, setTracking]       = useState(false);
   const [imgState, setImgState]       = useState<ImageState>("loading");
 
-  async function handleAddToPoke() {
+  async function handleViewRecipe() {
     if (tracking) return;
     setTracking(true);
     setLocalClicks((n) => n + 1);
@@ -58,6 +59,7 @@ export default function RecipeCard({
         )}
 
         <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-lift dark:bg-darkInput">
+          {/* Shimmer while loading */}
           {imgState === "loading" && (
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute inset-0 bg-lift dark:bg-darkInput" />
@@ -68,6 +70,7 @@ export default function RecipeCard({
             </div>
           )}
 
+          {/* Branded placeholder on failure */}
           {imgState === "error" && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-5xl font-semibold select-none" style={{ color: "#e8e8e8" }} aria-hidden>p</span>
@@ -112,7 +115,7 @@ export default function RecipeCard({
             href={pokeUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={handleAddToPoke}
+            onClick={handleViewRecipe}
             className="shrink-0 ml-3 text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 sm:px-4 py-2 rounded-full hover:opacity-75 transition-opacity"
           >
             View Recipe
