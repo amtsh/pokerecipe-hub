@@ -23,13 +23,15 @@ export default function RecipeCard({
   recipe: Recipe;
   clicks?: number;
 }) {
-  const pokeUrl  = `https://poke.com/r/${recipe.slug}`;
-  const ogImgUrl = `https://poke.com/r/${recipe.slug}/opengraph-image`;
+  const pokeUrl   = `https://poke.com/r/${recipe.slug}`;
+  const shareUrl  = `https://pokerecipe.book/r/${recipe.slug}`;
+  const ogImgUrl  = `https://poke.com/r/${recipe.slug}/opengraph-image`;
   const detailUrl = `/r/${recipe.slug}`;
 
   const [localClicks, setLocalClicks] = useState(clicks);
   const [tracking, setTracking]       = useState(false);
   const [imgState, setImgState]       = useState<ImageState>("loading");
+  const [copied, setCopied]           = useState(false);
 
   async function handleViewRecipe() {
     if (tracking) return;
@@ -49,12 +51,29 @@ export default function RecipeCard({
     }
   }
 
+  async function handleCopy(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      // Fallback for browsers without clipboard API
+      const el = document.createElement("textarea");
+      el.value = shareUrl;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
   return (
     <article className="flex flex-col bg-white dark:bg-darkSurface rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] overflow-hidden border border-rule/60 dark:border-darkBorder hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_6px_32px_rgba(0,0,0,0.6)] transition-shadow duration-200">
 
-      {/* Image + title link to internal detail page */}
+      {/* Image + title → internal detail page */}
       <Link href={detailUrl} className="block">
-        {/* Polaroid frame */}
         <div className="relative px-3 pt-3 pb-7 bg-white dark:bg-darkSurface">
           {recipe.featured && (
             <span className="absolute top-5 left-5 z-10 text-[0.55rem] tracking-widest uppercase font-bold bg-ink/85 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-full">
@@ -88,22 +107,21 @@ export default function RecipeCard({
             />
           </div>
         </div>
-        {/* Title */}
         <div className="px-4 -mt-1 mb-1.5">
-          <h3 className="text-sm font-semibold text-ink dark:text-white leading-snug group-hover:underline">
+          <h3 className="text-sm font-semibold text-ink dark:text-white leading-snug">
             {recipe.name}
           </h3>
         </div>
       </Link>
 
-      {/* Description + footer (not part of the link) */}
+      {/* Description + footer */}
       <div className="flex flex-col flex-1 px-4 pb-4">
         {recipe.description && (
           <p className="text-xs text-muted dark:text-darkMuted leading-relaxed mb-4 line-clamp-2">
             {recipe.description}
           </p>
         )}
-        <div className="flex items-center justify-between pt-3 border-t border-rule dark:border-darkBorder mt-auto">
+        <div className="flex items-center justify-between pt-3 border-t border-rule dark:border-darkBorder mt-auto gap-2">
           <div className="flex flex-col gap-0.5 min-w-0">
             <span className="text-[0.65rem] text-faint dark:text-darkFaint">by {recipe.author}</span>
             {localClicks > 0 && (
@@ -112,15 +130,38 @@ export default function RecipeCard({
               </span>
             )}
           </div>
-          <a
-            href={pokeUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={handleViewRecipe}
-            className="shrink-0 ml-3 text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 sm:px-4 py-2 rounded-full hover:opacity-75 transition-opacity"
-          >
-            View Recipe
-          </a>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* Copy link */}
+            <button
+              onClick={handleCopy}
+              title="Copy share link"
+              aria-label="Copy share link"
+              className={`text-xs border rounded-full px-2.5 py-2 transition-colors ${
+                copied
+                  ? "border-ink/30 dark:border-white/30 text-ink dark:text-white"
+                  : "border-rule dark:border-darkBorder text-faint dark:text-darkFaint hover:border-ink/30 dark:hover:border-white/20 hover:text-ink dark:hover:text-white"
+              }`}
+            >
+              {copied ? (
+                <span className="font-medium">&#10003;</span>
+              ) : (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                </svg>
+              )}
+            </button>
+            {/* View on Poke */}
+            <a
+              href={pokeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleViewRecipe}
+              className="text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 sm:px-4 py-2 rounded-full hover:opacity-75 transition-opacity"
+            >
+              View Recipe
+            </a>
+          </div>
         </div>
       </div>
     </article>

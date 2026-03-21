@@ -1,9 +1,10 @@
-import Navbar     from "./components/Navbar";
-import Hero       from "./components/Hero";
-import RecipeGrid from "./components/RecipeGrid";
-import Footer     from "./components/Footer";
+import Navbar       from "./components/Navbar";
+import Hero         from "./components/Hero";
+import RecipeGrid   from "./components/RecipeGrid";
+import WhatIsPoke   from "./components/WhatIsPoke";
+import Footer       from "./components/Footer";
 import type { Recipe } from "./components/RecipeCard";
-import { getSupabase } from "../../lib/supabase";
+import { getSupabase }  from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -31,8 +32,8 @@ async function getTopRecipes(): Promise<{
       slug:        r.slug,
       author:      "Amit Shinde",
       tags:        [],
-      featured:    r.featured   ?? false,
-      category:    r.category   ?? undefined,
+      featured:    r.featured  ?? false,
+      category:    r.category  ?? undefined,
     }));
 
     const clickMap: Record<string, number> = {};
@@ -52,6 +53,7 @@ export default async function Home() {
       <main className="pt-14">
         <Hero />
         <RecipeGrid initialRecipes={recipes} initialClickMap={clickMap} />
+        <WhatIsPoke />
       </main>
       <Footer />
     </>
