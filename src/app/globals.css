@@ -15,3 +15,8 @@ input:-webkit-autofill {
 }
 ::selection { background: #0a0a0a; color: #ffffff; }
 .dark ::selection { background: #ffffff; color: #0a0a0a; }
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
