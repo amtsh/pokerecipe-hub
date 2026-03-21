@@ -2,6 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+/** Persist theme to both cookie (SSR-readable) and localStorage (fallback). */
+function saveTheme(value: "dark" | "light") {
+  const maxAge = 60 * 60 * 24 * 365; // 1 year
+  document.cookie = `theme=${value}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  localStorage.setItem("theme", value);
+}
+
 export default function DarkModeToggle() {
   const [dark, setDark]       = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -15,13 +22,10 @@ export default function DarkModeToggle() {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("theme", next ? "dark" : "light");
+    saveTheme(next ? "dark" : "light");
   }
 
-  // Render a placeholder until mounted to avoid hydration mismatch
-  if (!mounted) {
-    return <div className="w-7 h-7" aria-hidden />;
-  }
+  if (!mounted) return <div className="w-7 h-7" aria-hidden />;
 
   return (
     <button
