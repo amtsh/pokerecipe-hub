@@ -6,7 +6,7 @@ export interface Recipe {
   id: string;
   name: string;
   description: string;
-  slug: string;   // used for click tracking and deriving the poke.com/r/<slug> URL
+  slug: string;
   author: string;
   tags: string[];
 }
@@ -41,13 +41,13 @@ export default function RecipeCard({
   }
 
   return (
-    <article className="group flex flex-col border border-rule rounded-2xl p-4 sm:p-6 bg-canvas hover:border-ink/20 hover:shadow-[0_2px_16px_rgba(0,0,0,0.06)] transition-all duration-200">
+    <article className="group flex flex-col border border-rule dark:border-darkBorder rounded-2xl p-4 sm:p-6 bg-canvas dark:bg-darkSurface hover:border-ink/20 dark:hover:border-white/10 hover:shadow-[0_2px_16px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_2px_20px_rgba(0,0,0,0.4)] transition-all duration-200">
       {recipe.tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
           {recipe.tags.map((tag) => (
             <span
               key={tag}
-              className="text-[0.6rem] tracking-widest uppercase font-medium text-faint border border-rule px-2 py-0.5 rounded-full"
+              className="text-[0.6rem] tracking-widest uppercase font-medium text-faint dark:text-darkFaint border border-rule dark:border-darkBorder px-2 py-0.5 rounded-full"
             >
               {tag}
             </span>
@@ -55,14 +55,18 @@ export default function RecipeCard({
         </div>
       )}
 
-      <h3 className="text-sm font-semibold text-ink leading-snug mb-2">{recipe.name}</h3>
-      <p className="text-sm text-muted leading-relaxed flex-1 mb-5">{recipe.description}</p>
+      <h3 className="text-sm font-semibold text-ink dark:text-white leading-snug mb-2">
+        {recipe.name}
+      </h3>
+      <p className="text-sm text-muted dark:text-darkMuted leading-relaxed flex-1 mb-5">
+        {recipe.description}
+      </p>
 
-      <div className="flex items-center justify-between pt-4 border-t border-rule">
+      <div className="flex items-center justify-between pt-4 border-t border-rule dark:border-darkBorder">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <span className="text-xs text-faint truncate">by {recipe.author}</span>
+          <span className="text-xs text-faint dark:text-darkFaint truncate">by {recipe.author}</span>
           {localClicks > 0 && (
-            <span className="text-xs text-faint shrink-0">
+            <span className="text-xs text-faint dark:text-darkFaint shrink-0">
               {localClicks.toLocaleString()} add{localClicks !== 1 ? "s" : ""}
             </span>
           )}
@@ -72,7 +76,7 @@ export default function RecipeCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleAddToPoke}
-          className="shrink-0 ml-3 text-xs font-medium bg-ink text-white px-3 sm:px-4 py-2 rounded-full hover:bg-muted transition-colors"
+          className="shrink-0 ml-3 text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 sm:px-4 py-2 rounded-full hover:opacity-75 transition-opacity"
         >
           Add to Poke
         </a>

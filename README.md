@@ -1,4 +1,4 @@
-# pokerecipe.hub
+# pokerecipe.book
 
 A community site for sharing and browsing [Poke](https://poke.com) recipes.
 Built with **Next.js 14** (App Router) + **Tailwind CSS** + **Supabase**.
@@ -34,9 +34,6 @@ create table recipes (
   submitted_at timestamptz not null default now()
 );
 
--- url is NOT stored — derived as https://poke.com/r/<slug> on the frontend
-
--- Atomic increment; auto-creates a minimal row on first click
 create or replace function increment_clicks(recipe_slug text)
 returns void as $$
   insert into recipes (slug, name, clicks)
@@ -53,41 +50,9 @@ create policy "public update" on recipes for update using (true);
 
 ---
 
-## Architecture
+## Features
 
-### Submission flow
-1. User pastes a `poke.com/r/...` or `poke.com/refer/...` link on `/submit`.
-2. `POST /api/scrape` fetches og:title (strips " – Poke" suffix) and og:description (truncated to 20 words).
-3. User reviews on a confirmation screen.
-4. `POST /api/recipes` saves `{ slug, name, description }` — no url column.
-
-### Homepage
-- Queries Supabase for the 10 most recently submitted recipes (`submitted_at DESC`).
-- URL for each card is derived client-side: `https://poke.com/r/${slug}`.
-- Falls back to 6 seed recipes if Supabase has no data.
-
-### Click tracking
-- `POST /api/click { slug }` → `increment_clicks(recipe_slug)` RPC.
-- `GET /api/click` returns `{ slug, clicks }` rows.
-
-### Search
-- `GET /api/recipes?q=...` runs `ilike` across name + description.
-
----
-
-## Structure
-
-```
-lib/
-  supabase.ts          -- lazy client
-  decode-entities.ts   -- HTML entity + unicode escape decoder
-src/app/
-  page.tsx             -- server component, newest 10 from DB
-  api/
-    click/route.ts     -- GET/POST by slug
-    recipes/route.ts   -- GET (search), POST (save slug+name+desc)
-    scrape/route.ts    -- POST metadata preview, strips " - Poke" suffix
-  submit/page.tsx
-  components/
-    Navbar, Hero, RecipeGrid, RecipeCard, Footer
-```
+- **Dark mode** toggle in the header (persists via localStorage, respects system preference on first visit)
+- **Live search** on the homepage hits Supabase `ilike` across name + description with 300ms debounce
+- **Submission flow**: paste link → scrape og meta (strips " – Poke" suffix, 20-word description cap) → confirm → save to DB
+- **Click tracking**: atomic `increment_clicks` RPC, optimistic UI update

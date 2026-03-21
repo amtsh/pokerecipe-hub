@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
-/** Fallback shown when Supabase has no submitted recipes yet */
 const SAMPLE_RECIPES: Recipe[] = [
   { id: "1", name: "Morning News Brief",   slug: "morning-news-brief",  author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
   { id: "2", name: "Inbox Zero",            slug: "inbox-zero",           author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
@@ -13,21 +12,12 @@ const SAMPLE_RECIPES: Recipe[] = [
   { id: "6", name: "Meeting Prep",         slug: "meeting-prep",          author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
 ];
 
-interface DBRow {
-  slug: string;
-  name: string;
-  description: string;
-  clicks: number;
-}
+interface DBRow { slug: string; name: string; description: string; clicks: number; }
 
-function rowsToRecipes(rows: DBRow[]): { recipes: Recipe[]; clickMap: Record<string, number> } {
+function rowsToRecipes(rows: DBRow[]) {
   const recipes: Recipe[] = rows.map((r, i) => ({
-    id:          String(i + 1),
-    name:        r.name        || r.slug,
-    description: r.description || "",
-    slug:        r.slug,
-    author:      "community",
-    tags:        [],
+    id: String(i + 1), name: r.name || r.slug, description: r.description || "",
+    slug: r.slug, author: "community", tags: [],
   }));
   const clickMap: Record<string, number> = {};
   for (const r of rows) clickMap[r.slug] = r.clicks ?? 0;
@@ -35,9 +25,7 @@ function rowsToRecipes(rows: DBRow[]): { recipes: Recipe[]; clickMap: Record<str
 }
 
 interface RecipeGridProps {
-  /** Server-fetched latest recipes — used when query is empty */
   initialRecipes?: Recipe[];
-  /** Server-fetched click counts keyed by slug */
   initialClickMap?: Record<string, number>;
 }
 
@@ -46,16 +34,12 @@ export default function RecipeGrid({
   initialClickMap = {},
 }: RecipeGridProps) {
   const baseRecipes  = initialRecipes.length > 0 ? initialRecipes : SAMPLE_RECIPES;
-  const baseClickMap = Object.keys(initialClickMap).length > 0 ? initialClickMap : {};
-
-  const [query, setQuery]               = useState("");
-  const [searchRecipes, setSearchRecipes] = useState<Recipe[] | null>(null);
+  const [query, setQuery]                   = useState("");
+  const [searchRecipes, setSearchRecipes]   = useState<Recipe[] | null>(null);
   const [searchClickMap, setSearchClickMap] = useState<Record<string, number>>({});
-  const [searching, setSearching]       = useState(false);
-  // Client-side click map used when no server-side data (seed recipes)
-  const [localClickMap, setLocalClickMap] = useState<Record<string, number>>(baseClickMap);
+  const [searching, setSearching]           = useState(false);
+  const [localClickMap, setLocalClickMap]   = useState<Record<string, number>>(initialClickMap);
 
-  // Populate client-side click map only when server didn't provide one
   useEffect(() => {
     if (Object.keys(initialClickMap).length > 0) return;
     fetch("/api/click")
@@ -69,7 +53,6 @@ export default function RecipeGrid({
       .catch(() => {});
   }, [initialClickMap]);
 
-  // Debounced live search against /api/recipes?q=
   const runSearch = useCallback(async (q: string) => {
     if (!q) { setSearchRecipes(null); setSearching(false); return; }
     setSearching(true);
@@ -95,19 +78,20 @@ export default function RecipeGrid({
     return () => clearTimeout(timer);
   }, [query, runSearch]);
 
-  const isSearching    = query.trim().length > 0;
-  const displayed      = isSearching ? (searchRecipes ?? []) : baseRecipes;
-  const displayClicks  = isSearching ? searchClickMap : localClickMap;
+  const isSearching   = query.trim().length > 0;
+  const displayed     = isSearching ? (searchRecipes ?? []) : baseRecipes;
+  const displayClicks = isSearching ? searchClickMap : localClickMap;
 
   return (
     <section id="browse" className="max-w-wide mx-auto px-4 sm:px-6 pb-24 sm:pb-32">
+      {/* Divider */}
       <div className="flex items-center gap-4 mb-10 sm:mb-12">
-        <div className="h-px flex-1 bg-rule" />
-        <span className="text-xs tracking-widest uppercase text-faint font-medium">Recipes</span>
-        <div className="h-px flex-1 bg-rule" />
+        <div className="h-px flex-1 bg-rule dark:bg-darkBorder" />
+        <span className="text-xs tracking-widest uppercase text-faint dark:text-darkFaint font-medium">Recipes</span>
+        <div className="h-px flex-1 bg-rule dark:bg-darkBorder" />
       </div>
 
-      {/* Search bar */}
+      {/* Search */}
       <div className="max-w-content mx-auto mb-8 sm:mb-12">
         <div className="relative">
           <input
@@ -116,25 +100,23 @@ export default function RecipeGrid({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search recipes"
             aria-label="Search recipes"
-            className="w-full bg-lift border border-rule rounded-full px-5 py-3 text-sm text-ink placeholder-faint focus:outline-none focus:border-ink/30 transition-colors"
+            className="w-full bg-lift dark:bg-darkInput border border-rule dark:border-darkBorder rounded-full px-5 py-3 text-sm text-ink dark:text-white placeholder-faint dark:placeholder-darkFaint focus:outline-none focus:border-ink/30 dark:focus:border-white/20 transition-colors"
           />
           {query && (
             <button
               onClick={() => setQuery("")}
               aria-label="Clear search"
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-faint hover:text-muted text-xs transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-faint dark:text-darkFaint hover:text-muted dark:hover:text-darkMuted text-xs transition-colors"
             >
               &times;
             </button>
           )}
         </div>
-
-        {/* Status line */}
-        <p className="text-xs text-faint mt-3 text-center h-4">
+        <p className="text-xs text-faint dark:text-darkFaint mt-3 text-center h-4">
           {searching ? (
-            <span className="animate-pulse">Searching\u2026</span>
+            <span className="animate-pulse">Searching&hellip;</span>
           ) : isSearching ? (
-            <>{ displayed.length } result{displayed.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;</>
+            <>{displayed.length} result{displayed.length !== 1 ? "s" : ""} for &ldquo;{query.trim()}&rdquo;</>
           ) : (
             <>{baseRecipes.length} recipe{baseRecipes.length !== 1 ? "s" : ""}</>
           )}
@@ -145,47 +127,37 @@ export default function RecipeGrid({
       {!searching && displayed.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {displayed.map((recipe) => (
-            <RecipeCard
-              key={recipe.slug}
-              recipe={recipe}
-              clicks={displayClicks[recipe.slug] ?? 0}
-            />
+            <RecipeCard key={recipe.slug} recipe={recipe} clicks={displayClicks[recipe.slug] ?? 0} />
           ))}
         </div>
       )}
 
-      {/* Skeleton while searching */}
+      {/* Skeleton */}
       {searching && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="border border-rule rounded-2xl p-4 sm:p-6 animate-pulse">
-              <div className="h-3 bg-lift rounded-full w-1/3 mb-4" />
-              <div className="h-4 bg-lift rounded-full w-2/3 mb-3" />
-              <div className="h-3 bg-lift rounded-full w-full mb-2" />
-              <div className="h-3 bg-lift rounded-full w-4/5" />
+            <div key={i} className="border border-rule dark:border-darkBorder rounded-2xl p-4 sm:p-6 animate-pulse">
+              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-1/3 mb-4" />
+              <div className="h-4 bg-lift dark:bg-darkInput rounded-full w-2/3 mb-3" />
+              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full mb-2" />
+              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
             </div>
           ))}
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty */}
       {!searching && displayed.length === 0 && (
         <div className="text-center py-20">
           {isSearching ? (
             <>
-              <p className="text-sm text-muted mb-2">
-                No recipes found for &ldquo;{query.trim()}&rdquo;.
-              </p>
-              <a href="/submit" className="text-sm text-ink underline underline-offset-2">
-                Submit one
-              </a>
+              <p className="text-sm text-muted dark:text-darkMuted mb-2">No recipes found for &ldquo;{query.trim()}&rdquo;.</p>
+              <a href="/submit" className="text-sm text-ink dark:text-white underline underline-offset-2">Submit one</a>
             </>
           ) : (
             <>
-              <p className="text-sm text-muted mb-2">No recipes yet.</p>
-              <a href="/submit" className="text-sm text-ink underline underline-offset-2">
-                Be the first to submit one
-              </a>
+              <p className="text-sm text-muted dark:text-darkMuted mb-2">No recipes yet.</p>
+              <a href="/submit" className="text-sm text-ink dark:text-white underline underline-offset-2">Be the first to submit one</a>
             </>
           )}
         </div>
