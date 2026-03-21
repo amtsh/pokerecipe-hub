@@ -3,13 +3,13 @@ import { getSupabase } from "../../../../lib/supabase";
 
 const ERR = { error: "Internal Server Error" };
 
-/** GET /api/click — returns all { url, clicks } rows */
+/** GET /api/click — returns all { slug, clicks } rows */
 export async function GET() {
   try {
     const sb = getSupabase();
     if (!sb) return NextResponse.json({ data: [] });
 
-    const { data, error } = await sb.from("recipes").select("url, clicks");
+    const { data, error } = await sb.from("recipes").select("slug, clicks");
     if (error) {
       console.error("[/api/click GET]", error.message);
       return NextResponse.json(ERR, { status: 500 });
@@ -22,22 +22,21 @@ export async function GET() {
 }
 
 /**
- * POST /api/click  { url: string }
- * Atomically increments clicks for the given URL.
- * Calls the increment_clicks(recipe_url) Postgres function.
+ * POST /api/click  { slug: string }
+ * Atomically increments clicks for the given slug.
  */
 export async function POST(req: NextRequest) {
   try {
     const sb = getSupabase();
     if (!sb) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
-    let url: string | undefined;
-    try { ({ url } = await req.json()); }
+    let slug: string | undefined;
+    try { ({ slug } = await req.json()); }
     catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
 
-    if (!url) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+    if (!slug) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-    const { error } = await sb.rpc("increment_clicks", { recipe_url: url });
+    const { error } = await sb.rpc("increment_clicks", { recipe_slug: slug });
     if (error) {
       console.error("[/api/click POST]", error.message);
       return NextResponse.json(ERR, { status: 500 });

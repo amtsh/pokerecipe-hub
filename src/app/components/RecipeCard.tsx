@@ -6,8 +6,7 @@ export interface Recipe {
   id: string;
   name: string;
   description: string;
-  url: string;    // canonical poke.com/r/<slug> — used for link + click tracking
-  slug: string;   // derived from url for display
+  slug: string;   // used for click tracking and deriving the poke.com/r/<slug> URL
   author: string;
   tags: string[];
 }
@@ -19,6 +18,7 @@ export default function RecipeCard({
   recipe: Recipe;
   clicks?: number;
 }) {
+  const pokeUrl = `https://poke.com/r/${recipe.slug}`;
   const [localClicks, setLocalClicks] = useState(clicks);
   const [tracking, setTracking]       = useState(false);
 
@@ -30,7 +30,7 @@ export default function RecipeCard({
       const res = await fetch("/api/click", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: recipe.url }),
+        body: JSON.stringify({ slug: recipe.slug }),
       });
       if (!res.ok) setLocalClicks((n) => Math.max(0, n - 1));
     } catch {
@@ -68,7 +68,7 @@ export default function RecipeCard({
           )}
         </div>
         <a
-          href={recipe.url}
+          href={pokeUrl}
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleAddToPoke}

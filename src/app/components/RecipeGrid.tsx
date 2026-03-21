@@ -4,17 +4,17 @@ import { useState, useMemo, useEffect } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
 const SAMPLE_RECIPES: Recipe[] = [
-  { id: "1", name: "Morning News Brief",   url: "https://poke.com/r/morning-news-brief",  slug: "morning-news-brief",  author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
-  { id: "2", name: "Inbox Zero",            url: "https://poke.com/r/inbox-zero",           slug: "inbox-zero",           author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
-  { id: "3", name: "Weekly Retrospective", url: "https://poke.com/r/weekly-retrospective", slug: "weekly-retrospective", author: "community", tags: ["Reflection", "Weekly"],  description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan." },
-  { id: "4", name: "Travel Companion",     url: "https://poke.com/r/travel-companion",     slug: "travel-companion",     author: "community", tags: ["Travel", "Automation"],  description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links." },
-  { id: "5", name: "Finance Pulse",        url: "https://poke.com/r/finance-pulse",        slug: "finance-pulse",        author: "community", tags: ["Finance", "Weekly"],     description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot." },
-  { id: "6", name: "Meeting Prep",         url: "https://poke.com/r/meeting-prep",         slug: "meeting-prep",         author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
+  { id: "1", name: "Morning News Brief",   slug: "morning-news-brief",  author: "community", tags: ["News", "Daily"],         description: "A curated 5-bullet summary of top headlines across tech, world news, and markets. Runs every morning at 8 AM." },
+  { id: "2", name: "Inbox Zero",            slug: "inbox-zero",           author: "community", tags: ["Email", "Productivity"], description: "Triages your emails, flags what matters, drafts replies for common threads, and archives the noise automatically." },
+  { id: "3", name: "Weekly Retrospective", slug: "weekly-retrospective",  author: "community", tags: ["Reflection", "Weekly"],  description: "Every Friday, pulls your calendar, completed tasks, and email threads into a concise weekly reflection and next-week plan." },
+  { id: "4", name: "Travel Companion",     slug: "travel-companion",      author: "community", tags: ["Travel", "Automation"],  description: "Watches for flight confirmations and hotel bookings, builds a trip timeline, and sends day-of reminders with check-in links." },
+  { id: "5", name: "Finance Pulse",        slug: "finance-pulse",         author: "community", tags: ["Finance", "Weekly"],     description: "Monitors spending receipts and bank alerts, categorises transactions, and delivers a weekly financial health snapshot." },
+  { id: "6", name: "Meeting Prep",         slug: "meeting-prep",          author: "community", tags: ["Calendar", "Meetings"],  description: "30 minutes before each calendar event, compiles relevant emails, notes, and thread context so you walk in prepared." },
 ];
 
 interface RecipeGridProps {
   initialRecipes?: Recipe[];
-  /** Click map keyed by URL e.g. { "https://poke.com/r/inbox-zero": 42 } */
+  /** Click map keyed by slug */
   initialClickMap?: Record<string, number>;
 }
 
@@ -26,15 +26,14 @@ export default function RecipeGrid({
   const [query, setQuery]       = useState("");
   const [clickMap, setClickMap] = useState<Record<string, number>>(initialClickMap);
 
-  // Client-side click fetch only when no server-side data was provided
   useEffect(() => {
     if (Object.keys(initialClickMap).length > 0) return;
     fetch("/api/click")
       .then((r) => r.json())
-      .then(({ data }: { data?: { url: string; clicks: number }[] }) => {
+      .then(({ data }: { data?: { slug: string; clicks: number }[] }) => {
         if (!data) return;
         const map: Record<string, number> = {};
-        for (const row of data) map[row.url] = row.clicks;
+        for (const row of data) map[row.slug] = row.clicks;
         setClickMap(map);
       })
       .catch(() => {});
@@ -88,7 +87,7 @@ export default function RecipeGrid({
             <RecipeCard
               key={recipe.id}
               recipe={recipe}
-              clicks={clickMap[recipe.url] ?? 0}
+              clicks={clickMap[recipe.slug] ?? 0}
             />
           ))}
         </div>

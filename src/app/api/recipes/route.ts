@@ -3,7 +3,10 @@ import { getSupabase } from "../../../../lib/supabase";
 
 const ERR = { error: "Internal Server Error" };
 
-/** GET /api/recipes — top 10 URLs ordered by clicks */
+/**
+ * GET /api/recipes
+ * Returns up to 10 recipes ordered newest-first (submitted_at DESC).
+ */
 export async function GET() {
   try {
     const sb = getSupabase();
@@ -11,8 +14,8 @@ export async function GET() {
 
     const { data, error } = await sb
       .from("recipes")
-      .select("url, clicks")
-      .order("clicks", { ascending: false })
+      .select("slug, name, description, url, clicks, submitted_at")
+      .order("submitted_at", { ascending: false })
       .limit(10);
 
     if (error) {
@@ -27,10 +30,9 @@ export async function GET() {
 }
 
 /**
- * POST /api/recipes  { url: string }
- * Saves only the canonical URL with clicks=0.
- * Name and description are NOT stored — they are fetched on the fly by the scraper.
- * Re-submitting an existing URL is a no-op (ignoreDuplicates).
+ * POST /api/recipes  { slug, name, description, canonical }
+ * Saves recipe metadata to Supabase.
+ * Re-submitting an existing slug is a no-op (ignoreDuplicates).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -41,14 +43,21 @@ export async function POST(req: NextRequest) {
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
 
-    const { canonical } = body;
-    if (!canonical) {
+    const { slug, name, description, canonical } = body;
+    if (!slug || !canonical) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const { error } = await sb
-      .from("recipes")
-      .upsert({ url: canonical, clicks: 0 }, { onConflict: "url", ignoreDuplicates: true });
+    const { error } = await sb.from("recipes").upsert(
+      {
+        slug,
+        name:        name        || slug,
+        description: description || "",
+        url:         canonical,
+        clicks:      0,
+      },
+      { onConflict: "slug", ignoreDuplicates: true }
+    );
 
     if (error) {
       console.error("[/api/recipes POST]", error.message);

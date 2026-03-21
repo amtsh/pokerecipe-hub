@@ -12,11 +12,9 @@ export interface ScrapeResult {
  * POST /api/scrape
  * Body: { url: string }  — poke.com/r/<slug> or poke.com/refer/<slug>
  *
- * Strategy:
- *  1. Validate & extract slug (casing preserved).
- *  2. Server-side fetch → parse og/twitter/standard meta tags.
- *  3. Decode all HTML entities in extracted strings.
- *  4. Fall back to a slug-derived title if the page is gated or fetch fails.
+ * Returns scraped metadata for the submit-page preview.
+ * Description is truncated to the first 20 words.
+ * This data is used for display only; persistence is handled by /api/recipes.
  */
 export async function POST(req: NextRequest) {
   let url: string | undefined;
@@ -27,7 +25,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "url is required" }, { status: 400 });
   }
 
-  // Normalise: prepend https:// if user pasted a bare domain
   const raw        = url.trim();
   const normalised = raw.startsWith("http") ? raw : `https://${raw}`;
 
@@ -42,7 +39,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Support both /r/<slug> and /refer/<slug> — preserve original casing
   const match = parsed.pathname.match(/^\/(?:r|refer)\/([A-Za-z0-9_-]+)/);
   if (!match) {
     return NextResponse.json(
@@ -51,7 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const slug      = match[1];                        // casing preserved
+  const slug      = match[1];
   const canonical = `https://poke.com/r/${slug}`;
   let   name      = slugToTitle(slug);
   let   description = "";
@@ -68,58 +64,57 @@ export async function POST(req: NextRequest) {
     });
 
     if (res.ok) {
-      const html = await res.text();
+      const html  = await res.text();
       const metas = parseMetaTags(html);
-
       name =
-        metas["og:title"]            ||
-        metas["twitter:title"]       ||
-        metas["title"]               ||
-        extractTitle(html)           ||
+        metas["og:title"]        ||
+        metas["twitter:title"]   ||
+        metas["title"]           ||
+        extractTitle(html)       ||
         name;
-
       description =
         metas["og:description"]      ||
         metas["twitter:description"] ||
         metas["description"]         ||
         description;
     }
-  } catch {
-    // Timeout, network error, or gated page — fall back to slug-derived values
-  }
+  } catch { /* timeout or gated page — fall back to slug-derived values */ }
 
   return NextResponse.json({
     slug,
     name:        decodeEntities(name.trim()),
-    description: decodeEntities(description.trim()),
+    // Truncate to first 20 words before storing or displaying
+    description: truncateWords(decodeEntities(description.trim()), 20),
     canonical,
   } as ScrapeResult);
 }
 
-// ── helpers ──────────────────────────────────────────────────────────────
+// ── helpers ────────────────────────────────────────────────────────────────────
+
+/** Trim to the first n words, appending \u2026 if truncated. */
+function truncateWords(s: string, n: number): string {
+  if (!s) return s;
+  const words = s.trim().split(/\s+/);
+  if (words.length <= n) return s.trim();
+  return words.slice(0, n).join(" ") + "\u2026";
+}
 
 function parseMetaTags(html: string): Record<string, string> {
   const result: Record<string, string> = {};
   const tagRe = /<meta([^>]+?)\/?>/gi;
   let tagMatch: RegExpExecArray | null;
-
   while ((tagMatch = tagRe.exec(html)) !== null) {
     const attrs = tagMatch[1];
     const key   = attrVal(attrs, "property") || attrVal(attrs, "name");
     const value = attrVal(attrs, "content");
-    if (key && value) {
-      result[key.toLowerCase()] = decodeEntities(value);
-    }
+    if (key && value) result[key.toLowerCase()] = decodeEntities(value);
   }
   return result;
 }
 
 function attrVal(attrs: string, name: string): string {
-  const re = new RegExp(
-    `\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`,
-    "i"
-  );
-  const m = attrs.match(re);
+  const re = new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i");
+  const m  = attrs.match(re);
   if (!m) return "";
   return (m[1] ?? m[2] ?? m[3] ?? "").trim();
 }
@@ -130,7 +125,5 @@ function extractTitle(html: string): string {
 }
 
 function slugToTitle(slug: string): string {
-  return slug
-    .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return slug.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

@@ -76,11 +76,16 @@ export default function SubmitPage() {
     setError("");
     setPhase("saving");
     try {
-      // Only save the canonical URL — name/description are NOT stored in DB
+      // Save slug + name + truncated description to DB
       const res = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ canonical: scraped.canonical }),
+        body: JSON.stringify({
+          slug:        scraped.slug,
+          name:        scraped.name,
+          description: scraped.description,
+          canonical:   scraped.canonical,
+        }),
       });
       if (!res.ok) {
         setError("Something went wrong. Please try again.");

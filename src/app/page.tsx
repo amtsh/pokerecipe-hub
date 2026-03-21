@@ -7,16 +7,7 @@ import { getSupabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-function slugFromUrl(url: string): string {
-  const m = url.match(/\/(?:r|refer)\/([^/?#]+)/);
-  return m ? m[1] : url;
-}
-
-function slugToTitle(slug: string): string {
-  return slug.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-async function getTopRecipes(): Promise<{
+async function getLatestRecipes(): Promise<{
   recipes: Recipe[];
   clickMap: Record<string, number>;
 }> {
@@ -26,27 +17,23 @@ async function getTopRecipes(): Promise<{
 
     const { data, error } = await sb
       .from("recipes")
-      .select("url, clicks")
-      .order("clicks", { ascending: false })
+      .select("slug, name, description, clicks")
+      .order("submitted_at", { ascending: false })
       .limit(10);
 
     if (error || !data || data.length === 0) return { recipes: [], clickMap: {} };
 
-    const recipes: Recipe[] = data.map((r, i) => {
-      const slug = slugFromUrl(r.url);
-      return {
-        id:          String(i + 1),
-        name:        slugToTitle(slug),
-        description: "",
-        url:         r.url,
-        slug,
-        author:      "community",
-        tags:        [],
-      };
-    });
+    const recipes: Recipe[] = data.map((r, i) => ({
+      id:          String(i + 1),
+      name:        r.name        || r.slug,
+      description: r.description || "",
+      slug:        r.slug,
+      author:      "community",
+      tags:        [],
+    }));
 
     const clickMap: Record<string, number> = {};
-    for (const r of data) clickMap[r.url] = r.clicks ?? 0;
+    for (const r of data) clickMap[r.slug] = r.clicks ?? 0;
 
     return { recipes, clickMap };
   } catch {
@@ -55,7 +42,7 @@ async function getTopRecipes(): Promise<{
 }
 
 export default async function Home() {
-  const { recipes, clickMap } = await getTopRecipes();
+  const { recipes, clickMap } = await getLatestRecipes();
 
   return (
     <>
