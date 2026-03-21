@@ -3,7 +3,7 @@ import { getSupabase } from "../../../../lib/supabase";
 
 /**
  * GET /api/categories
- * Returns an alphabetically sorted list of distinct non-null categories.
+ * Returns a sorted list of distinct non-null category values.
  */
 export async function GET() {
   try {
@@ -21,9 +21,12 @@ export async function GET() {
       return NextResponse.json({ categories: [] });
     }
 
-    const categories = [
-      ...new Set((data ?? []).map((r) => r.category).filter(Boolean)),
-    ].sort() as string[];
+    // Array.from avoids the --downlevelIteration requirement of [...new Set(...)]
+    const categories = Array.from(
+      new Set(
+        (data ?? []).map((r) => r.category).filter((c): c is string => !!c)
+      )
+    ).sort();
 
     return NextResponse.json({ categories });
   } catch (e) {
