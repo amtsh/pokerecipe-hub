@@ -160,11 +160,11 @@ export default function RecipeGrid({
 
         {!loading && recipes.length === 0 && (
           <div className="text-center py-24">
-            <p className="text-sm text-muted dark:text-darkMuted mb-3">
+            <p className="text-xs text-muted dark:text-darkMuted mb-3">
               {isFiltered ? "No recipes match." : "No recipes yet."}
             </p>
             {!isFiltered && (
-              <a href="/submit" className="text-sm text-ink dark:text-white underline underline-offset-2">
+              <a href="/submit" className="text-xs text-ink dark:text-white underline underline-offset-2">
                 Be the first
               </a>
             )}
@@ -176,7 +176,7 @@ export default function RecipeGrid({
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="text-sm font-medium text-ink/50 dark:text-white/50 hover:text-ink dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] px-7 py-3 rounded-full transition-all duration-150 disabled:opacity-40"
+              className="text-xs font-medium text-ink/50 dark:text-white/50 hover:text-ink dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] px-6 py-2.5 rounded-full transition-all duration-150 disabled:opacity-40"
             >
               {loadingMore ? "Loading\u2026" : "Load More"}
             </button>
@@ -185,11 +185,11 @@ export default function RecipeGrid({
 
       </section>
 
-      {/* ── Floating pill: search + category filter only ──────────────────── */}
+      {/* Floating pill */}
       <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center gap-2 px-3 py-2">
 
-          {/* Compact search */}
+          {/* Search — 120px idle, expands on focus */}
           <div className="relative shrink-0">
             <svg
               className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-faint dark:text-darkFaint pointer-events-none"
@@ -206,7 +206,7 @@ export default function RecipeGrid({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search"
               aria-label="Search recipes"
-              className="w-[72px] focus:w-[148px] sm:focus:w-[180px] transition-[width] duration-200 ease-out bg-black/[0.05] dark:bg-white/[0.08] text-ink dark:text-white text-xs rounded-full pl-7 pr-2 py-1.5 focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.11] placeholder-faint dark:placeholder-darkFaint"
+              className="w-[120px] focus:w-[190px] sm:focus:w-[220px] transition-[width] duration-200 ease-out bg-black/[0.05] dark:bg-white/[0.08] text-ink dark:text-white text-xs rounded-full pl-7 pr-2 py-1.5 focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.11] placeholder-faint dark:placeholder-darkFaint"
             />
             {query && (
               <button
@@ -219,7 +219,7 @@ export default function RecipeGrid({
             )}
           </div>
 
-          {/* Scrollable category pills: All + dynamic categories */}
+          {/* Category pills */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
             <button
               onClick={() => handleCategory(null)}
