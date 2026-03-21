@@ -4,19 +4,32 @@ import { getSupabase } from "../../../../lib/supabase";
 const ERR = { error: "Internal Server Error" };
 
 /**
- * GET /api/recipes
- * Returns up to 10 recipes ordered newest-first (submitted_at DESC).
+ * GET /api/recipes?q=<optional search term>
+ * Without q: returns 10 most recently submitted recipes.
+ * With q:    full-text search across name and description (case-insensitive),
+ *            up to 20 results, still ordered newest-first.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const sb = getSupabase();
     if (!sb) return NextResponse.json({ data: [] });
 
-    const { data, error } = await sb
+    const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+
+    let queryBuilder = sb
       .from("recipes")
-      .select("slug, name, description, url, clicks, submitted_at")
+      .select("slug, name, description, clicks")
       .order("submitted_at", { ascending: false })
-      .limit(10);
+      .limit(q ? 20 : 10);
+
+    if (q) {
+      // ilike = case-insensitive LIKE; search both name and description
+      queryBuilder = queryBuilder.or(
+        `name.ilike.%${q}%,description.ilike.%${q}%`
+      );
+    }
+
+    const { data, error } = await queryBuilder;
 
     if (error) {
       console.error("[/api/recipes GET]", error.message);
@@ -31,8 +44,7 @@ export async function GET() {
 
 /**
  * POST /api/recipes  { slug, name, description, canonical }
- * Saves recipe metadata to Supabase.
- * Re-submitting an existing slug is a no-op (ignoreDuplicates).
+ * Saves recipe metadata. Re-submitting an existing slug is a no-op.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -49,13 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error } = await sb.from("recipes").upsert(
-      {
-        slug,
-        name:        name        || slug,
-        description: description || "",
-        url:         canonical,
-        clicks:      0,
-      },
+      { slug, name: name || slug, description: description || "", url: canonical, clicks: 0 },
       { onConflict: "slug", ignoreDuplicates: true }
     );
 
