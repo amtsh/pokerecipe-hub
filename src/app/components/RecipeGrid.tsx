@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import RecipeCard, { type Recipe } from "./RecipeCard";
+import RecipeRow from "./RecipeRow";
 
 const PAGE_SIZE = 12;
 const SORT      = "popular";
@@ -32,16 +33,46 @@ function rowsToRecipes(rows: DBRow[]) {
   return { recipes, clickMap };
 }
 
+// ─ Toggle icons ───────────────────────────────────────────────────────────────
+
+function GridIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className="w-[15px] h-[15px]" aria-hidden>
+      <rect x="1" y="1" width="6" height="6" rx="1.25" />
+      <rect x="9" y="1" width="6" height="6" rx="1.25" />
+      <rect x="1" y="9" width="6" height="6" rx="1.25" />
+      <rect x="9" y="9" width="6" height="6" rx="1.25" />
+    </svg>
+  );
+}
+
+function ListIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="currentColor" className="w-[15px] h-[15px]" aria-hidden>
+      <rect x="1" y="2"   width="4" height="4"   rx="0.8" />
+      <rect x="7" y="3.5" width="8" height="1.5" rx="0.75" />
+      <rect x="1" y="7"   width="4" height="4"   rx="0.8" />
+      <rect x="7" y="8.5" width="8" height="1.5" rx="0.75" />
+      <rect x="1" y="12"  width="4" height="2.5" rx="0.8" />
+      <rect x="7" y="13" width="8" height="1.5" rx="0.75" />
+    </svg>
+  );
+}
+
+// ─ Component ───────────────────────────────────────────────────────────────────
+
 interface RecipeGridProps {
   initialRecipes?:  Recipe[];
   initialClickMap?: Record<string, number>;
   initialCategory?: string | null;
+  initialView?:     "grid" | "list";
 }
 
 export default function RecipeGrid({
   initialRecipes  = [],
   initialClickMap = {},
   initialCategory = null,
+  initialView     = "grid",
 }: RecipeGridProps) {
   const router = useRouter();
 
@@ -56,6 +87,11 @@ export default function RecipeGrid({
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
+  // View toggle state — seeded from cookie via SSR prop to avoid layout shift
+  const [view, setView]           = useState<"grid" | "list">(initialView);
+  const [fading, setFading]       = useState(false);
+  const fadeTimer                 = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const isFirstRender = useRef(true);
   const searchRef     = useRef<HTMLInputElement>(null);
 
@@ -67,6 +103,9 @@ export default function RecipeGrid({
       })
       .catch(() => {});
   }, []);
+
+  // Cancel fade timer on unmount
+  useEffect(() => () => { if (fadeTimer.current) clearTimeout(fadeTimer.current); }, []);
 
   async function doFetch(
     q: string,
@@ -131,6 +170,20 @@ export default function RecipeGrid({
     }
   }
 
+  /** Switch view with a 150ms cross-fade. Persists to cookie so the server
+   *  can server-render the correct layout on next load (no CLS). */
+  function handleToggleView(newView: "grid" | "list") {
+    if (newView === view) return;
+    if (fadeTimer.current) clearTimeout(fadeTimer.current);
+    setFading(true);
+    fadeTimer.current = setTimeout(() => {
+      setView(newView);
+      setFading(false);
+      // Persist preference to cookie (1 year, lax)
+      document.cookie = `recipe_view=${newView};path=/;max-age=31536000;samesite=lax`;
+    }, 150);
+  }
+
   const isFiltered = query.trim().length > 0 || !!activeCategory;
 
   const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 whitespace-nowrap";
@@ -141,48 +194,126 @@ export default function RecipeGrid({
     <>
       <section id="browse" className="max-w-wide mx-auto px-4 sm:px-6 pt-4 pb-52 sm:pb-56">
 
-        {isFiltered && !loading && (
-          <p className="text-xs text-faint dark:text-darkFaint mb-8 text-center">
-            {recipes.length} result{recipes.length !== 1 ? "s" : ""}
-            {query.trim() ? <> for &ldquo;{query.trim()}&rdquo;</> : null}
-            {activeCategory && !query.trim() ? <> in {activeCategory}</> : null}
-          </p>
-        )}
+        {/* Section header: results count + view toggle */}
+        <div className="flex items-center justify-between mb-6 sm:mb-8 h-7">
+          {/* Results label — shown only when filtering */}
+          <span className="text-xs text-faint dark:text-darkFaint">
+            {isFiltered && !loading
+              ? (
+                <>
+                  {recipes.length} result{recipes.length !== 1 ? "s" : ""}
+                  {query.trim() ? <> for \u201c{query.trim()}\u201d</> : null}
+                  {activeCategory && !query.trim() ? <> in {activeCategory}</> : null}
+                </>
+              )
+              : null}
+          </span>
 
-        {!loading && recipes.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
-            {recipes.map((recipe) => (
-              <RecipeCard key={recipe.slug} recipe={recipe} clicks={clickMap[recipe.slug] ?? 0} />
-            ))}
+          {/* Segmented view toggle */}
+          <div
+            className="flex items-center gap-0.5 bg-lift dark:bg-darkInput rounded-[8px] p-[3px]"
+            role="group"
+            aria-label="Recipe view"
+          >
+            <button
+              onClick={() => handleToggleView("grid")}
+              title="Grid view"
+              aria-pressed={view === "grid"}
+              className={`p-1.5 rounded-[5px] transition-all duration-150 ${
+                view === "grid"
+                  ? "bg-white dark:bg-[#2a2a2a] text-ink dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+                  : "text-muted/50 dark:text-white/30 hover:text-muted dark:hover:text-white/60"
+              }`}
+            >
+              <GridIcon />
+            </button>
+            <button
+              onClick={() => handleToggleView("list")}
+              title="List view"
+              aria-pressed={view === "list"}
+              className={`p-1.5 rounded-[5px] transition-all duration-150 ${
+                view === "list"
+                  ? "bg-white dark:bg-[#2a2a2a] text-ink dark:text-white shadow-[0_1px_3px_rgba(0,0,0,0.12)] dark:shadow-[0_1px_3px_rgba(0,0,0,0.5)]"
+                  : "text-muted/50 dark:text-white/30 hover:text-muted dark:hover:text-white/60"
+              }`}
+            >
+              <ListIcon />
+            </button>
           </div>
-        )}
+        </div>
 
-        {loading && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="aspect-video w-full rounded-2xl sm:rounded-3xl bg-lift dark:bg-darkInput mb-3" />
-                <div className="h-3.5 bg-lift dark:bg-darkInput rounded-full w-2/3 mb-2" />
-                <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full mb-1.5" />
-                <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Content area — fades when switching views */}
+        <div className={`transition-opacity duration-150 ${fading ? "opacity-0" : "opacity-100"}`}>
 
-        {!loading && recipes.length === 0 && (
-          <div className="text-center py-24">
-            <p className="text-xs text-muted dark:text-darkMuted mb-3">
-              {isFiltered ? "No recipes match." : "No recipes yet."}
-            </p>
-            {!isFiltered && (
-              <a href="/submit" className="text-xs text-ink dark:text-white underline underline-offset-2">
-                Be the first
-              </a>
-            )}
-          </div>
-        )}
+          {/* ─ Grid view ───────────────────────────────────────── */}
+          {view === "grid" && (
+            <>
+              {!loading && recipes.length > 0 && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
+                  {recipes.map((recipe) => (
+                    <RecipeCard key={recipe.slug} recipe={recipe} clicks={clickMap[recipe.slug] ?? 0} />
+                  ))}
+                </div>
+              )}
+              {loading && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 sm:gap-10 lg:gap-12">
+                  {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="aspect-video w-full rounded-2xl sm:rounded-3xl bg-lift dark:bg-darkInput mb-3" />
+                      <div className="h-3.5 bg-lift dark:bg-darkInput rounded-full w-2/3 mb-2" />
+                      <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full mb-1.5" />
+                      <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
 
+          {/* ─ List view ───────────────────────────────────────── */}
+          {view === "list" && (
+            <>
+              {!loading && recipes.length > 0 && (
+                <div className="border border-rule dark:border-darkBorder rounded-2xl overflow-hidden divide-y divide-rule dark:divide-darkBorder">
+                  {recipes.map((recipe) => (
+                    <RecipeRow key={recipe.slug} recipe={recipe} clicks={clickMap[recipe.slug] ?? 0} />
+                  ))}
+                </div>
+              )}
+              {loading && (
+                <div className="border border-rule dark:border-darkBorder rounded-2xl overflow-hidden divide-y divide-rule dark:divide-darkBorder">
+                  {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                    <div key={i} className="flex items-center gap-3.5 px-4 py-3 animate-pulse">
+                      <div className="w-[42px] h-[42px] rounded-[10px] bg-lift dark:bg-darkInput shrink-0" />
+                      <div className="flex-1 space-y-2">
+                        <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-2/5" />
+                        <div className="h-2.5 bg-lift dark:bg-darkInput rounded-full w-3/4" />
+                      </div>
+                      <div className="w-3 h-3 bg-lift dark:bg-darkInput rounded-full shrink-0" />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Empty state (shared) */}
+          {!loading && recipes.length === 0 && (
+            <div className="text-center py-24">
+              <p className="text-xs text-muted dark:text-darkMuted mb-3">
+                {isFiltered ? "No recipes match." : "No recipes yet."}
+              </p>
+              {!isFiltered && (
+                <a href="/submit" className="text-xs text-ink dark:text-white underline underline-offset-2">
+                  Be the first
+                </a>
+              )}
+            </div>
+          )}
+
+        </div>{/* /fade wrapper */}
+
+        {/* Load more */}
         {!loading && hasMore && recipes.length > 0 && (
           <div className="flex justify-center mt-16 sm:mt-20">
             <button

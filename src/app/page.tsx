@@ -5,6 +5,7 @@ import WhatIsPoke   from "./components/WhatIsPoke";
 import Footer       from "./components/Footer";
 import type { Recipe } from "./components/RecipeCard";
 import { getSupabase } from "../../lib/supabase";
+import { cookies }  from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ async function getTopRecipes(category: string | null = null): Promise<{
       .select("slug, name, description, clicks, featured, category")
       .eq("approved", true)
       .order("clicks", { ascending: false })
-      .range(0, 11); // first 12
+      .range(0, 11);
 
     if (category) qb = qb.eq("category", category);
 
@@ -55,6 +56,11 @@ export default async function Home({
   const initialCategory = searchParams?.category ?? null;
   const { recipes, clickMap } = await getTopRecipes(initialCategory);
 
+  // Read view preference from cookie — server-side so the correct layout
+  // is rendered on first paint and there is no layout shift on reload.
+  const cookieStore = cookies();
+  const initialView = cookieStore.get("recipe_view")?.value === "list" ? "list" : "grid";
+
   return (
     <>
       <Navbar />
@@ -64,6 +70,7 @@ export default async function Home({
           initialRecipes={recipes}
           initialClickMap={clickMap}
           initialCategory={initialCategory}
+          initialView={initialView as "grid" | "list"}
         />
         <WhatIsPoke />
       </main>
