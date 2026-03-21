@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
 const PAGE_SIZE = 12;
+const SORT      = "popular"; // always top (clicks DESC)
 
 interface DBRow {
   slug: string;
@@ -30,8 +31,6 @@ function rowsToRecipes(rows: DBRow[]) {
   return { recipes, clickMap };
 }
 
-type SortOption = "newest" | "popular";
-
 interface RecipeGridProps {
   initialRecipes?: Recipe[];
   initialClickMap?: Record<string, number>;
@@ -50,7 +49,6 @@ export default function RecipeGrid({
 
   const [query, setQuery]                   = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [sort, setSort]                     = useState<SortOption>("popular");
   const [categories, setCategories]         = useState<string[]>([]);
 
   const isFirstRender = useRef(true);
@@ -68,7 +66,6 @@ export default function RecipeGrid({
   async function doFetch(
     q: string,
     category: string | null,
-    s: SortOption,
     off: number,
     append: boolean,
   ) {
@@ -78,7 +75,7 @@ export default function RecipeGrid({
       const params = new URLSearchParams();
       if (q)        params.set("q", q);
       if (category) params.set("category", category);
-      params.set("sort",   s);
+      params.set("sort",   SORT);
       params.set("limit",  String(PAGE_SIZE));
       params.set("offset", String(off));
 
@@ -110,22 +107,21 @@ export default function RecipeGrid({
     setOffset(0);
     setHasMore(true);
     const trimmed = query.trim();
-    const timer = setTimeout(() => doFetch(trimmed, activeCategory, sort, 0, false), 300);
+    const timer = setTimeout(() => doFetch(trimmed, activeCategory, 0, false), 300);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, activeCategory, sort]);
+  }, [query, activeCategory]);
 
   function handleLoadMore() {
-    doFetch(query.trim(), activeCategory, sort, offset, true);
+    doFetch(query.trim(), activeCategory, offset, true);
   }
 
   function handleCategory(cat: string | null) {
     setActiveCategory((prev) => (prev === cat ? null : cat));
   }
 
-  const isFiltered = query.trim().length > 0 || !!activeCategory || sort !== "popular";
+  const isFiltered = query.trim().length > 0 || !!activeCategory;
 
-  // Shared pill style helpers
   const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 whitespace-nowrap";
   const pillActive   = "bg-ink text-white dark:bg-white dark:text-ink";
   const pillInactive = "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white";
@@ -189,13 +185,12 @@ export default function RecipeGrid({
 
       </section>
 
-      {/* ── Single-row floating pill ────────────────────────────────────────── */}
+      {/* ── Floating pill: search + category filter only ──────────────────── */}
       <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center gap-2 px-3 py-2">
 
-          {/* Compact search — expands on focus */}
+          {/* Compact search */}
           <div className="relative shrink-0">
-            {/* Magnifying glass */}
             <svg
               className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-faint dark:text-darkFaint pointer-events-none"
               viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
@@ -224,35 +219,14 @@ export default function RecipeGrid({
             )}
           </div>
 
-          {/* Scrollable unified pill row: Sort + divider + Categories */}
+          {/* Scrollable category pills: All + dynamic categories */}
           <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
-
-            {/* Sort pills */}
-            <button
-              onClick={() => setSort("popular")}
-              className={`${pillBase} ${sort === "popular" ? pillActive : pillInactive}`}
-            >
-              Top
-            </button>
-            <button
-              onClick={() => setSort("newest")}
-              className={`${pillBase} ${sort === "newest" ? pillActive : pillInactive}`}
-            >
-              New
-            </button>
-
-            {/* Separator */}
-            <span className="shrink-0 w-px h-3.5 bg-black/[0.12] dark:bg-white/[0.12] mx-0.5" aria-hidden />
-
-            {/* Category: All */}
             <button
               onClick={() => handleCategory(null)}
               className={`${pillBase} ${!activeCategory ? pillActive : pillInactive}`}
             >
               All
             </button>
-
-            {/* Dynamic categories */}
             {categories.map((cat) => (
               <button
                 key={cat}
@@ -262,8 +236,8 @@ export default function RecipeGrid({
                 {cat}
               </button>
             ))}
-
           </div>
+
         </div>
       </div>
     </>
