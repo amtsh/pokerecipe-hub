@@ -8,7 +8,7 @@ import { getSupabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-async function getTopRecipes(): Promise<{
+async function getTopRecipes(category: string | null = null): Promise<{
   recipes: Recipe[];
   clickMap: Record<string, number>;
 }> {
@@ -16,14 +16,16 @@ async function getTopRecipes(): Promise<{
     const sb = getSupabase();
     if (!sb) return { recipes: [], clickMap: {} };
 
-    // Default view: Top 12, sorted by popularity (clicks DESC)
-    const { data, error } = await sb
+    let qb = sb
       .from("recipes")
       .select("slug, name, description, clicks, featured, category")
       .eq("approved", true)
       .order("clicks", { ascending: false })
-      .range(0, 11); // limit 12
+      .range(0, 11); // first 12
 
+    if (category) qb = qb.eq("category", category);
+
+    const { data, error } = await qb;
     if (error || !data || data.length === 0) return { recipes: [], clickMap: {} };
 
     const recipes: Recipe[] = data.map((r, i) => ({
@@ -39,21 +41,30 @@ async function getTopRecipes(): Promise<{
 
     const clickMap: Record<string, number> = {};
     for (const r of data) clickMap[r.slug] = r.clicks ?? 0;
-
     return { recipes, clickMap };
   } catch {
     return { recipes: [], clickMap: {} };
   }
 }
 
-export default async function Home() {
-  const { recipes, clickMap } = await getTopRecipes();
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: { category?: string };
+}) {
+  const initialCategory = searchParams?.category ?? null;
+  const { recipes, clickMap } = await getTopRecipes(initialCategory);
+
   return (
     <>
       <Navbar />
       <main className="pt-14">
         <Hero />
-        <RecipeGrid initialRecipes={recipes} initialClickMap={clickMap} />
+        <RecipeGrid
+          initialRecipes={recipes}
+          initialClickMap={clickMap}
+          initialCategory={initialCategory}
+        />
         <WhatIsPoke />
       </main>
       <Footer />

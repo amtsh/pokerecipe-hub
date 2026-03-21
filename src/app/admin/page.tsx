@@ -16,9 +16,8 @@ interface AdminRecipe {
 }
 
 export default function AdminPage() {
-  // PIN digits
-  const [digits, setDigits]     = useState(["", "", "", ""]);
-  const [pinError, setPinError] = useState("");
+  const [digits, setDigits]         = useState(["", "", "", ""]);
+  const [pinError, setPinError]     = useState("");
   const [pinLoading, setPinLoading] = useState(false);
   const ref0 = useRef<HTMLInputElement>(null);
   const ref1 = useRef<HTMLInputElement>(null);
@@ -26,18 +25,15 @@ export default function AdminPage() {
   const ref3 = useRef<HTMLInputElement>(null);
   const digitRefs = [ref0, ref1, ref2, ref3];
 
-  // Auth
   const [pin, setPin]       = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
 
-  // Admin content
-  const [tab, setTab]           = useState<Tab>("pending");
-  const [pending, setPending]   = useState<AdminRecipe[]>([]);
-  const [managed, setManaged]   = useState<AdminRecipe[]>([]);
-  const [loading, setLoading]   = useState(false);
+  const [tab, setTab]             = useState<Tab>("pending");
+  const [pending, setPending]     = useState<AdminRecipe[]>([]);
+  const [managed, setManaged]     = useState<AdminRecipe[]>([]);
+  const [loading, setLoading]     = useState(false);
   const [actionMsg, setActionMsg] = useState("");
 
-  // Restore session on mount
   useEffect(() => {
     const stored = sessionStorage.getItem("admin_pin");
     if (stored) { setPin(stored); setAuthed(true); }
@@ -66,7 +62,6 @@ export default function AdminPage() {
     if (authed && pin) fetchData(pin, tab);
   }, [authed, pin, tab, fetchData]);
 
-  // PIN input handling
   function handleDigit(i: number, val: string) {
     const d = val.replace(/\D/g, "").slice(-1);
     const next = digits.map((v, idx) => (idx === i ? d : v));
@@ -106,7 +101,6 @@ export default function AdminPage() {
     }
   }
 
-  // Admin actions
   async function handleApprove(slug: string, name: string) {
     if (!pin) return;
     const res = await fetch("/api/admin/approve", {
@@ -115,7 +109,7 @@ export default function AdminPage() {
       body: JSON.stringify({ slug, pin }),
     });
     if (res.ok) {
-      setPending(p => p.filter(r => r.slug !== slug));
+      setPending((p) => p.filter((r) => r.slug !== slug));
       flash(`\u201c${name}\u201d approved and live on homepage.`);
     }
   }
@@ -129,8 +123,8 @@ export default function AdminPage() {
       body: JSON.stringify({ slug, pin }),
     });
     if (res.ok) {
-      setPending(p => p.filter(r => r.slug !== slug));
-      setManaged(m => m.filter(r => r.slug !== slug));
+      setPending((p) => p.filter((r) => r.slug !== slug));
+      setManaged((m) => m.filter((r) => r.slug !== slug));
       flash(`\u201c${name}\u201d deleted.`);
     }
   }
@@ -150,23 +144,22 @@ export default function AdminPage() {
 
   const displayed = tab === "pending" ? pending : managed;
 
-  // ── PIN screen ──────────────────────────────────────────────────────────────
+  // ── PIN screen ────────────────────────────────────────────────────────────
   if (!authed) {
     return (
       <>
         <Navbar />
         <main className="pt-14 min-h-screen bg-white dark:bg-darkBg flex items-center justify-center">
           <div className="w-full max-w-xs mx-auto px-4 text-center">
-            <p className="text-xs tracking-widest uppercase text-faint dark:text-darkFaint mb-8 font-medium">
+            <p className="text-[0.6rem] tracking-[0.22em] uppercase text-faint dark:text-darkFaint mb-8 font-medium">
               Admin
             </p>
-            <h1 className="text-2xl font-semibold tracking-[-0.03em] text-ink dark:text-white mb-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-ink dark:text-white mb-2">
               Enter PIN
             </h1>
-            <p className="text-sm text-muted dark:text-darkMuted mb-10">
+            <p className="text-xs text-muted dark:text-darkMuted mb-10">
               4-digit access code
             </p>
-
             <div className="flex justify-center gap-3 mb-6">
               {digits.map((d, i) => (
                 <input
@@ -183,7 +176,6 @@ export default function AdminPage() {
                 />
               ))}
             </div>
-
             {pinError   && <p className="text-xs text-red-400 mt-2">{pinError}</p>}
             {pinLoading && <p className="text-xs text-faint dark:text-darkFaint animate-pulse mt-2">Checking&hellip;</p>}
           </div>
@@ -199,11 +191,10 @@ export default function AdminPage() {
       <main className="pt-14 min-h-screen bg-white dark:bg-darkBg">
         <div className="max-w-wide mx-auto px-4 sm:px-6 py-10 sm:py-16">
 
-          {/* Header */}
           <div className="flex items-start justify-between mb-8">
             <div>
-              <p className="text-xs tracking-widest uppercase text-faint dark:text-darkFaint mb-1 font-medium">Admin</p>
-              <h1 className="text-2xl font-semibold tracking-[-0.03em] text-ink dark:text-white">
+              <p className="text-[0.6rem] tracking-[0.22em] uppercase text-faint dark:text-darkFaint mb-1 font-medium">Admin</p>
+              <h1 className="text-xl font-semibold tracking-tight text-ink dark:text-white">
                 Recipe Manager
               </h1>
             </div>
@@ -215,20 +206,18 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Toast */}
           {actionMsg && (
-            <div className="mb-6 px-4 py-3 bg-lift dark:bg-darkSurface border border-rule dark:border-darkBorder rounded-xl text-sm text-ink dark:text-white">
+            <div className="mb-6 px-4 py-3 bg-lift dark:bg-darkSurface border border-rule dark:border-darkBorder rounded-xl text-xs text-ink dark:text-white">
               {actionMsg}
             </div>
           )}
 
-          {/* Tabs */}
           <div className="flex items-center gap-0.5 bg-lift dark:bg-darkInput border border-rule dark:border-darkBorder rounded-full p-0.5 w-fit mb-8">
             {(["pending", "manage"] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`text-sm px-5 py-2 rounded-full font-medium transition-colors ${
+                className={`text-xs px-5 py-2 rounded-full font-medium transition-colors ${
                   tab === t
                     ? "bg-ink text-white dark:bg-white dark:text-ink"
                     : "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white"
@@ -241,7 +230,6 @@ export default function AdminPage() {
             ))}
           </div>
 
-          {/* Loading skeleton */}
           {loading && (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
@@ -250,33 +238,29 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Empty */}
           {!loading && displayed.length === 0 && (
             <div className="text-center py-20">
-              <p className="text-sm text-muted dark:text-darkMuted">
-                {tab === "pending"
-                  ? "No recipes awaiting approval."
-                  : "No approved recipes yet."}
+              <p className="text-xs text-muted dark:text-darkMuted">
+                {tab === "pending" ? "No recipes awaiting approval." : "No approved recipes yet."}
               </p>
             </div>
           )}
 
-          {/* Table */}
           {!loading && displayed.length > 0 && (
             <div className="border border-rule dark:border-darkBorder rounded-2xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-rule dark:border-darkBorder bg-lift dark:bg-darkSurface">
-                    <th className="text-left px-5 py-3 text-[0.65rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium">
+                    <th className="text-left px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium">
                       Name
                     </th>
-                    <th className="text-left px-5 py-3 text-[0.65rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium hidden sm:table-cell">
+                    <th className="text-left px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium hidden sm:table-cell">
                       Category
                     </th>
-                    <th className="text-left px-5 py-3 text-[0.65rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium hidden md:table-cell">
+                    <th className="text-left px-5 py-3 text-[0.6rem] tracking-widests uppercase text-faint dark:text-darkFaint font-medium hidden md:table-cell">
                       {tab === "manage" ? "Views" : "Submitted"}
                     </th>
-                    <th className="text-right px-5 py-3 text-[0.65rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium">
+                    <th className="text-right px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium">
                       Actions
                     </th>
                   </tr>
@@ -288,8 +272,18 @@ export default function AdminPage() {
                       className="border-b border-rule dark:border-darkBorder last:border-0 hover:bg-lift/60 dark:hover:bg-darkSurface/60 transition-colors"
                     >
                       <td className="px-5 py-4">
-                        <div className="font-medium text-ink dark:text-white leading-snug">{r.name}</div>
-                        <div className="text-xs text-faint dark:text-darkFaint font-mono mt-0.5 truncate max-w-[160px]">{r.slug}</div>
+                        {/* Recipe name — links to poke.com in new tab */}
+                        <a
+                          href={`https://poke.com/r/${r.slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-ink dark:text-white hover:opacity-60 transition-opacity leading-snug"
+                        >
+                          {r.name}
+                        </a>
+                        <div className="text-xs text-faint dark:text-darkFaint font-mono mt-0.5 truncate max-w-[160px]">
+                          {r.slug}
+                        </div>
                       </td>
                       <td className="px-5 py-4 hidden sm:table-cell">
                         {r.category ? (

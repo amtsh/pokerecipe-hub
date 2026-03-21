@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import RecipeCard, { type Recipe } from "./RecipeCard";
 
 const PAGE_SIZE = 12;
-const SORT      = "popular"; // always top (clicks DESC)
+const SORT      = "popular";
 
 interface DBRow {
   slug: string;
@@ -32,14 +33,19 @@ function rowsToRecipes(rows: DBRow[]) {
 }
 
 interface RecipeGridProps {
-  initialRecipes?: Recipe[];
+  initialRecipes?:  Recipe[];
   initialClickMap?: Record<string, number>;
+  /** Pre-selected category from URL (?category=X). Server passes this down. */
+  initialCategory?: string | null;
 }
 
 export default function RecipeGrid({
-  initialRecipes = [],
+  initialRecipes  = [],
   initialClickMap = {},
+  initialCategory = null,
 }: RecipeGridProps) {
+  const router = useRouter();
+
   const [recipes, setRecipes]         = useState<Recipe[]>(initialRecipes);
   const [clickMap, setClickMap]       = useState<Record<string, number>>(initialClickMap);
   const [offset, setOffset]           = useState<number>(initialRecipes.length);
@@ -48,11 +54,19 @@ export default function RecipeGrid({
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [query, setQuery]                   = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  // Seed active category from URL param — deep link support
+  const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * Skip the first re-fetch only when we have no URL category (server already
+   * rendered the correct data). When a category IS pre-selected via URL, the
+   * server renders that slice, so we still skip (data is correct).
+   * Any subsequent filter change triggers a fresh fetch.
+   */
   const isFirstRender = useRef(true);
-  const searchRef     = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -102,6 +116,8 @@ export default function RecipeGrid({
     }
   }
 
+  // Re-fetch whenever query or activeCategory changes. Skip the very first
+  // render because the server already supplied the correct initial data.
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     setOffset(0);
@@ -116,8 +132,19 @@ export default function RecipeGrid({
     doFetch(query.trim(), activeCategory, offset, true);
   }
 
+  /**
+   * Toggle a category and mirror the selection to the browser URL so the
+   * page is deep-linkable and the back-button works as expected.
+   */
   function handleCategory(cat: string | null) {
-    setActiveCategory((prev) => (prev === cat ? null : cat));
+    const next = activeCategory === cat ? null : cat;
+    setActiveCategory(next);
+
+    if (next) {
+      router.replace(`/?category=${encodeURIComponent(next)}`, { scroll: false });
+    } else {
+      router.replace("/", { scroll: false });
+    }
   }
 
   const isFiltered = query.trim().length > 0 || !!activeCategory;
@@ -134,6 +161,7 @@ export default function RecipeGrid({
           <p className="text-xs text-faint dark:text-darkFaint mb-8 text-center">
             {recipes.length} result{recipes.length !== 1 ? "s" : ""}
             {query.trim() ? <> for &ldquo;{query.trim()}&rdquo;</> : null}
+            {activeCategory && !query.trim() ? <> in {activeCategory}</> : null}
           </p>
         )}
 
@@ -189,7 +217,7 @@ export default function RecipeGrid({
       <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
         <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center gap-2 px-3 py-2">
 
-          {/* Search — 120px idle, expands on focus */}
+          {/* Search */}
           <div className="relative shrink-0">
             <svg
               className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-faint dark:text-darkFaint pointer-events-none"
