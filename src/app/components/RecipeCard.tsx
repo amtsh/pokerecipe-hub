@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export interface Recipe {
   id: string;
@@ -28,6 +28,21 @@ export default function RecipeCard({
   const [localClicks, setLocalClicks] = useState(clicks);
   const [tracking, setTracking]       = useState(false);
   const [imgState, setImgState]       = useState<ImageState>("loading");
+  const imgRef                        = useRef<HTMLImageElement>(null);
+
+  /**
+   * Hydration race fix: the browser can finish loading the <img> before React
+   * attaches the onLoad/onError handlers (especially on fast connections or
+   * cached images). After mount, if the image already completed, fast-forward
+   * imgState so the shimmer is cleared immediately.
+   */
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    if (el.complete) {
+      setImgState(el.naturalWidth > 0 ? "loaded" : "error");
+    }
+  }, []);
 
   async function handleViewRecipe() {
     if (tracking) return;
@@ -49,7 +64,7 @@ export default function RecipeCard({
 
   return (
     <article className="hover:scale-[1.01] active:scale-[0.99] transition-transform duration-200 ease-out">
-      {/* Image — floats directly on the canvas, no border or shadow */}
+      {/* Image — links directly to poke.com */}
       <a href={pokeUrl} target="_blank" rel="noopener noreferrer" className="block">
         <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-lift dark:bg-darkInput mb-3">
           {recipe.featured && (
@@ -57,6 +72,8 @@ export default function RecipeCard({
               &#9733; Featured
             </span>
           )}
+
+          {/* Shimmer skeleton */}
           {imgState === "loading" && (
             <div className="absolute inset-0 overflow-hidden">
               <div className="absolute inset-0 bg-lift dark:bg-darkInput" />
@@ -66,13 +83,17 @@ export default function RecipeCard({
               />
             </div>
           )}
+
+          {/* Branded placeholder on error */}
           {imgState === "error" && (
             <div className="absolute inset-0 flex items-center justify-center">
               <span className="text-5xl font-semibold select-none" style={{ color: "#e8e8e8" }} aria-hidden>p</span>
             </div>
           )}
+
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
+            ref={imgRef}
             src={ogImgUrl}
             alt={recipe.name}
             onLoad={() => setImgState("loaded")}
