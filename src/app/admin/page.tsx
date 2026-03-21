@@ -103,29 +103,49 @@ export default function AdminPage() {
 
   async function handleApprove(slug: string, name: string) {
     if (!pin) return;
-    const res = await fetch("/api/admin/approve", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, pin }),
-    });
-    if (res.ok) {
-      setPending((p) => p.filter((r) => r.slug !== slug));
+    // Optimistically remove immediately so the UI feels instant
+    setPending((prev) => prev.filter((r) => r.slug !== slug));
+    try {
+      const res = await fetch("/api/admin/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, pin }),
+      });
+      if (!res.ok) {
+        // Revert: re-fetch the pending list so the row comes back
+        await fetchData(pin, "pending");
+        flash("Approval failed \u2014 please try again.");
+        return;
+      }
       flash(`\u201c${name}\u201d approved and live on homepage.`);
+    } catch {
+      await fetchData(pin, "pending");
+      flash("Approval failed \u2014 please try again.");
     }
   }
 
   async function handleDelete(slug: string, name: string) {
     if (!pin) return;
     if (!confirm(`Delete \u201c${name}\u201d? This cannot be undone.`)) return;
-    const res = await fetch("/api/admin/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug, pin }),
-    });
-    if (res.ok) {
-      setPending((p) => p.filter((r) => r.slug !== slug));
-      setManaged((m) => m.filter((r) => r.slug !== slug));
+    // Optimistically remove immediately
+    setPending((p) => p.filter((r) => r.slug !== slug));
+    setManaged((m) => m.filter((r) => r.slug !== slug));
+    try {
+      const res = await fetch("/api/admin/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, pin }),
+      });
+      if (!res.ok) {
+        // Revert by re-fetching the current tab
+        await fetchData(pin, tab);
+        flash("Delete failed \u2014 please try again.");
+        return;
+      }
       flash(`\u201c${name}\u201d deleted.`);
+    } catch {
+      await fetchData(pin, tab);
+      flash("Delete failed \u2014 please try again.");
     }
   }
 
@@ -257,7 +277,7 @@ export default function AdminPage() {
                     <th className="text-left px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium hidden sm:table-cell">
                       Category
                     </th>
-                    <th className="text-left px-5 py-3 text-[0.6rem] tracking-widests uppercase text-faint dark:text-darkFaint font-medium hidden md:table-cell">
+                    <th className="text-left px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium hidden md:table-cell">
                       {tab === "manage" ? "Views" : "Submitted"}
                     </th>
                     <th className="text-right px-5 py-3 text-[0.6rem] tracking-widest uppercase text-faint dark:text-darkFaint font-medium">
@@ -272,7 +292,6 @@ export default function AdminPage() {
                       className="border-b border-rule dark:border-darkBorder last:border-0 hover:bg-lift/60 dark:hover:bg-darkSurface/60 transition-colors"
                     >
                       <td className="px-5 py-4">
-                        {/* Recipe name — links to poke.com in new tab */}
                         <a
                           href={`https://poke.com/r/${r.slug}`}
                           target="_blank"

@@ -35,7 +35,6 @@ function rowsToRecipes(rows: DBRow[]) {
 interface RecipeGridProps {
   initialRecipes?:  Recipe[];
   initialClickMap?: Record<string, number>;
-  /** Pre-selected category from URL (?category=X). Server passes this down. */
   initialCategory?: string | null;
 }
 
@@ -54,19 +53,11 @@ export default function RecipeGrid({
   const [loadingMore, setLoadingMore] = useState(false);
 
   const [query, setQuery]                   = useState("");
-  // Seed active category from URL param — deep link support
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
-  const searchRef = useRef<HTMLInputElement>(null);
-
-  /**
-   * Skip the first re-fetch only when we have no URL category (server already
-   * rendered the correct data). When a category IS pre-selected via URL, the
-   * server renders that slice, so we still skip (data is correct).
-   * Any subsequent filter change triggers a fresh fetch.
-   */
   const isFirstRender = useRef(true);
+  const searchRef     = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch("/api/categories")
@@ -116,8 +107,6 @@ export default function RecipeGrid({
     }
   }
 
-  // Re-fetch whenever query or activeCategory changes. Skip the very first
-  // render because the server already supplied the correct initial data.
   useEffect(() => {
     if (isFirstRender.current) { isFirstRender.current = false; return; }
     setOffset(0);
@@ -132,14 +121,9 @@ export default function RecipeGrid({
     doFetch(query.trim(), activeCategory, offset, true);
   }
 
-  /**
-   * Toggle a category and mirror the selection to the browser URL so the
-   * page is deep-linkable and the back-button works as expected.
-   */
   function handleCategory(cat: string | null) {
     const next = activeCategory === cat ? null : cat;
     setActiveCategory(next);
-
     if (next) {
       router.replace(`/?category=${encodeURIComponent(next)}`, { scroll: false });
     } else {
@@ -220,7 +204,7 @@ export default function RecipeGrid({
           {/* Search */}
           <div className="relative shrink-0">
             <svg
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-faint dark:text-darkFaint pointer-events-none"
+              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/40 dark:text-white/40 pointer-events-none"
               viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
               strokeLinecap="round" strokeLinejoin="round"
             >
@@ -234,13 +218,13 @@ export default function RecipeGrid({
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search"
               aria-label="Search recipes"
-              className="w-[120px] focus:w-[190px] sm:focus:w-[220px] transition-[width] duration-200 ease-out bg-black/[0.05] dark:bg-white/[0.08] text-ink dark:text-white text-xs rounded-full pl-7 pr-2 py-1.5 focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.11] placeholder-faint dark:placeholder-darkFaint"
+              className="w-[120px] focus:w-[190px] sm:focus:w-[220px] transition-[width] duration-200 ease-out bg-black/[0.05] dark:bg-white/[0.08] text-ink dark:text-white text-xs rounded-full pl-7 pr-2 py-1.5 focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.11] placeholder:text-black/40 dark:placeholder:text-white/40"
             />
             {query && (
               <button
                 onClick={() => { setQuery(""); searchRef.current?.blur(); }}
                 aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-faint dark:text-darkFaint hover:text-muted text-[10px] leading-none"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40 hover:text-muted text-[10px] leading-none"
               >
                 &times;
               </button>
