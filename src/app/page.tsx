@@ -17,8 +17,8 @@ async function getTopRecipes(): Promise<{
 
     const { data, error } = await sb
       .from("recipes")
-      .select("slug, name, description, clicks, featured")
-      .order("featured", { ascending: false })
+      .select("slug, name, description, clicks, featured, category")
+      .order("featured",     { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(10);
 
@@ -31,7 +31,8 @@ async function getTopRecipes(): Promise<{
       slug:        r.slug,
       author:      "Amit Shinde",
       tags:        [],
-      featured:    r.featured ?? false,
+      featured:    r.featured   ?? false,
+      category:    r.category   ?? undefined,
     }));
 
     const clickMap: Record<string, number> = {};
@@ -45,7 +46,6 @@ async function getTopRecipes(): Promise<{
 
 export default async function Home() {
   const { recipes, clickMap } = await getTopRecipes();
-
   return (
     <>
       <Navbar />

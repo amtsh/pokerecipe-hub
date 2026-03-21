@@ -4,31 +4,39 @@ import { getSupabase } from "../../../../lib/supabase";
 const ERR = { error: "Internal Server Error" };
 
 /**
- * GET /api/recipes?q=<optional>
- * Without q: 10 most recent (featured first, then submitted_at DESC).
- * With q:    ilike search across name + description, up to 20 results.
+ * GET /api/recipes?q=&category=&sort=newest|popular
+ * - No params:  10 newest (featured first)
+ * - q:          ilike search across name + description
+ * - category:   exact match on category column
+ * - sort=popular: order by clicks DESC
  */
 export async function GET(req: NextRequest) {
   try {
     const sb = getSupabase();
     if (!sb) return NextResponse.json({ data: [] });
 
-    const q = req.nextUrl.searchParams.get("q")?.trim() ?? "";
+    const { searchParams } = req.nextUrl;
+    const q        = searchParams.get("q")?.trim()        ?? "";
+    const category = searchParams.get("category")?.trim() ?? "";
+    const sort     = searchParams.get("sort")             ?? "newest";
+    const isFiltered = q || category || sort === "popular";
 
-    let queryBuilder = sb
+    let qb = sb
       .from("recipes")
-      .select("slug, name, description, clicks, featured")
-      .order("featured", { ascending: false })
-      .order("submitted_at", { ascending: false })
-      .limit(q ? 20 : 10);
+      .select("slug, name, description, clicks, featured, category")
+      .limit(isFiltered ? 20 : 10);
 
-    if (q) {
-      queryBuilder = queryBuilder.or(
-        `name.ilike.%${q}%,description.ilike.%${q}%`
-      );
+    if (q)        qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
+    if (category) qb = qb.eq("category", category);
+
+    if (sort === "popular") {
+      qb = qb.order("clicks", { ascending: false });
+    } else {
+      qb = qb.order("featured", { ascending: false });
+      qb = qb.order("submitted_at", { ascending: false });
     }
 
-    const { data, error } = await queryBuilder;
+    const { data, error } = await qb;
 
     if (error) {
       console.error("[/api/recipes GET]", error.message);
@@ -41,11 +49,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-/**
- * POST /api/recipes  { slug, name, description }
- * Saves a new recipe. featured defaults to false in the DB.
- * Re-submitting an existing slug is a no-op (ignoreDuplicates).
- */
+/** POST /api/recipes  { slug, name, description, category? } */
 export async function POST(req: NextRequest) {
   try {
     const sb = getSupabase();
@@ -55,16 +59,21 @@ export async function POST(req: NextRequest) {
     try { body = await req.json(); }
     catch { return NextResponse.json({ error: "Invalid request" }, { status: 400 }); }
 
-    const { slug, name, description } = body;
-    if (!slug) {
-      return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-    }
+    const { slug, name, description, category } = body;
+    if (!slug) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-    const { error } = await sb.from("recipes").upsert(
-      // featured is intentionally omitted — DB defaults it to false
-      { slug, name: name || slug, description: description || "", clicks: 0 },
-      { onConflict: "slug", ignoreDuplicates: true }
-    );
+    const row: Record<string, unknown> = {
+      slug,
+      name:        name        || slug,
+      description: description || "",
+      clicks:      0,
+    };
+    if (category) row.category = category;
+
+    const { error } = await sb.from("recipes").upsert(row, {
+      onConflict: "slug",
+      ignoreDuplicates: true,
+    });
 
     if (error) {
       console.error("[/api/recipes POST]", error.message);

@@ -2,11 +2,25 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "pokerecipe.book",
-  description: "Discover and share Poke recipes built by the community.",
+  metadataBase: new URL("https://pokerecipe.book"),
+  title: {
+    default: "pokerecipe.book",
+    template: "%s | pokerecipe.book",
+  },
+  description:
+    "Discover and add community-built Poke recipes. One click to automate your day.",
+  openGraph: {
+    siteName: "pokerecipe.book",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@poke",
+  },
+  robots: { index: true, follow: true },
 };
 
-// Inline script runs before hydration to apply saved theme without flash
 const themeScript = `(function(){
   var t=localStorage.getItem('theme');
   var d=window.matchMedia('(prefers-color-scheme: dark)').matches;
