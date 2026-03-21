@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "../../../../../lib/supabase";
+import { getSupabaseAdmin } from "../../../../../lib/supabase";
 
 /**
  * POST /api/admin/delete  { slug: string, pin: string }
  * Permanently deletes a recipe after validating the admin PIN.
+ * Uses the service role client to bypass RLS.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid request" }, { status: 400 });
     }
 
-    const sb = getSupabase();
+    const sb = getSupabaseAdmin();
     if (!sb) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
     const { error } = await sb
@@ -31,7 +32,9 @@ export async function POST(req: NextRequest) {
       console.error("[/api/admin/delete]", error.message);
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (e) {
     console.error("[/api/admin/delete]", e);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

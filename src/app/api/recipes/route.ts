@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "../../../../lib/supabase";
+import { getSupabase, getSupabaseAdmin } from "../../../../lib/supabase";
 
 const ERR      = { error: "Internal Server Error" };
 const PAGE_MAX = 50;
@@ -47,7 +47,9 @@ export async function GET(req: NextRequest) {
       console.error("[/api/recipes GET]", error.message);
       return NextResponse.json(ERR, { status: 500 });
     }
-    return NextResponse.json({ data: data ?? [] });
+    return NextResponse.json({ data: data ?? [] }, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    });
   } catch (e) {
     console.error("[/api/recipes GET]", e);
     return NextResponse.json(ERR, { status: 500 });
@@ -57,10 +59,11 @@ export async function GET(req: NextRequest) {
 /**
  * POST /api/recipes  { slug, name, description, category?, tweet_id? }
  * Inserts with approved=false (requires admin approval).
+ * Uses admin client so the insert always succeeds regardless of RLS.
  */
 export async function POST(req: NextRequest) {
   try {
-    const sb = getSupabase();
+    const sb = getSupabaseAdmin();
     if (!sb) return NextResponse.json({ error: "Service unavailable" }, { status: 503 });
 
     let body: Record<string, string>;
@@ -89,7 +92,9 @@ export async function POST(req: NextRequest) {
       console.error("[/api/recipes POST]", error.message);
       return NextResponse.json(ERR, { status: 500 });
     }
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true }, {
+      headers: { "Cache-Control": "no-store" },
+    });
   } catch (e) {
     console.error("[/api/recipes POST]", e);
     return NextResponse.json(ERR, { status: 500 });
