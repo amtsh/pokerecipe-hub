@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 /**
@@ -73,6 +74,7 @@ export default async function RootLayout({
       </head>
       <body className="bg-white dark:bg-darkBg text-ink dark:text-white transition-colors duration-150">
         {children}
+        <Analytics />
       </body>
     </html>
   );
