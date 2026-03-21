@@ -117,14 +117,12 @@ export async function POST(req: NextRequest) {
 
 /**
  * Extract the Poke platform status from the RSC payload embedded in the page HTML.
- *
- * In the raw HTML, the recipe data object appears inside self.__next_f.push([1,"..."]) with
- * escaped quotes: \"isInternal\":(true|false),\"status\":\"published\"
+ * The RSC payload has the recipe data with escaped quotes:
+ *   \"isInternal\":(true|false),\"status\":\"<value>\"
  * The isInternal anchor ensures we match the recipe data object specifically.
- *
- * Returns the status string (e.g. "published", "pending_review") or null if not found.
+ * NOT exported — route files must only export HTTP handlers and config constants.
  */
-export function extractPokeStatus(html: string): string | null {
+function extractPokeStatus(html: string): string | null {
   const m = html.match(/\\"isInternal\\":(true|false),\\"status\\":\\"([a-z_]+)\\"/);
   return m ? m[2] : null;
 }
