@@ -17,7 +17,6 @@ interface AdminRecipe {
 }
 
 const REPLY_TEXT = encodeURIComponent("Just added this to pokerecipe.book");
-
 function tweetIntentUrl(tweetId: string) {
   return `https://twitter.com/intent/tweet?in_reply_to=${tweetId}&text=${REPLY_TEXT}`;
 }
@@ -87,9 +86,7 @@ export default function AdminPage() {
     setPinError("");
     setPinLoading(true);
     try {
-      const res = await fetch(
-        `/api/admin/recipes?status=pending&pin=${encodeURIComponent(p)}`
-      );
+      const res = await fetch(`/api/admin/recipes?status=pending&pin=${encodeURIComponent(p)}`);
       if (res.status === 401) {
         setPinError("Wrong PIN. Try again.");
         setDigits(["", "", "", ""]);
@@ -103,14 +100,18 @@ export default function AdminPage() {
     } catch {
       setPinError("Connection error. Try again.");
       setDigits(["", "", "", ""]);
-    } finally {
-      setPinLoading(false);
-    }
+    } finally { setPinLoading(false); }
   }
 
-  /** Standard approve — no reply. */
+  /**
+   * Approve a pending recipe.
+   * - Captures the item from pending state before removing it.
+   * - On success: removes from pending AND prepends to managed (no tab-switch re-fetch needed).
+   * - On failure: restores item to pending using the captured snapshot (no fetchData call).
+   */
   async function handleApprove(slug: string, name: string) {
     if (!pin) return;
+    const snapshot = pending.find((r) => r.slug === slug) ?? null;
     setPending((prev) => prev.filter((r) => r.slug !== slug));
     try {
       const res = await fetch("/api/admin/approve", {
@@ -118,40 +119,61 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, pin }),
       });
-      if (!res.ok) { await fetchData(pin, "pending"); flash("Approval failed \u2014 please try again."); return; }
+      if (!res.ok) {
+        if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+        flash("Approval failed \u2014 please try again.");
+        return;
+      }
+      // Move the item into managed state immediately
+      if (snapshot) setManaged((prev) => [snapshot, ...prev]);
       flash(`\u201c${name}\u201d approved and live on homepage.`);
     } catch {
-      await fetchData(pin, "pending"); flash("Approval failed \u2014 please try again.");
+      if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+      flash("Approval failed \u2014 please try again.");
     }
   }
 
   /**
-   * Reply & Approve — opens Twitter Web Intent in a new tab immediately
-   * (must happen before any await to avoid popup blockers), then approves in background.
+   * Reply & Approve: opens Twitter Web Intent immediately (must be synchronous before any await),
+   * then approves in the background using the same state-sync pattern as handleApprove.
    */
   async function handleReplyApprove(slug: string, name: string, tweetId: string) {
     if (!pin) return;
-    // 1. Open reply intent FIRST — browser allows window.open only from direct user-action
+    // Open intent BEFORE any await — browsers block window.open after async gaps
     window.open(tweetIntentUrl(tweetId), "_blank", "noopener,noreferrer");
-    // 2. Optimistic removal
+    const snapshot = pending.find((r) => r.slug === slug) ?? null;
     setPending((prev) => prev.filter((r) => r.slug !== slug));
-    // 3. Background approval
     try {
       const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, pin }),
       });
-      if (!res.ok) { await fetchData(pin, "pending"); flash("Approval failed \u2014 please try again."); return; }
+      if (!res.ok) {
+        if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+        flash("Approval failed \u2014 please try again.");
+        return;
+      }
+      if (snapshot) setManaged((prev) => [snapshot, ...prev]);
       flash(`\u201c${name}\u201d approved! Reply window opened in a new tab.`);
     } catch {
-      await fetchData(pin, "pending"); flash("Approval failed \u2014 please try again.");
+      if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+      flash("Approval failed \u2014 please try again.");
     }
   }
 
+  /**
+   * Delete (reject) a recipe.
+   * - Captures snapshots before removing from both lists.
+   * - On success: item stays gone, flash shown.
+   * - On failure: restores only the specific item using captured snapshots.
+   * Never calls fetchData — avoids the "disappear then reappear" bug.
+   */
   async function handleDelete(slug: string, name: string) {
     if (!pin) return;
     if (!confirm(`Delete \u201c${name}\u201d? This cannot be undone.`)) return;
+    const pendingSnap = pending.find((r) => r.slug === slug) ?? null;
+    const managedSnap = managed.find((r) => r.slug === slug) ?? null;
     setPending((p) => p.filter((r) => r.slug !== slug));
     setManaged((m) => m.filter((r) => r.slug !== slug));
     try {
@@ -160,10 +182,17 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, pin }),
       });
-      if (!res.ok) { await fetchData(pin, tab); flash("Delete failed \u2014 please try again."); return; }
+      if (!res.ok) {
+        if (pendingSnap) setPending((p) => [pendingSnap, ...p.filter((r) => r.slug !== slug)]);
+        if (managedSnap) setManaged((m) => [managedSnap, ...m.filter((r) => r.slug !== slug)]);
+        flash("Delete failed \u2014 please try again.");
+        return;
+      }
       flash(`\u201c${name}\u201d deleted.`);
     } catch {
-      await fetchData(pin, tab); flash("Delete failed \u2014 please try again.");
+      if (pendingSnap) setPending((p) => [pendingSnap, ...p.filter((r) => r.slug !== slug)]);
+      if (managedSnap) setManaged((m) => [managedSnap, ...m.filter((r) => r.slug !== slug)]);
+      flash("Delete failed \u2014 please try again.");
     }
   }
 
@@ -240,7 +269,7 @@ export default function AdminPage() {
                   tab === t ? "bg-ink text-white dark:bg-white dark:text-ink" : "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white"
                 }`}
               >
-                {t === "pending" ? `Pending${pending.length > 0 ? ` (${pending.length})` : ""}` : "Manage"}
+                {t === "pending" ? `Pending${pending.length > 0 ? ` (${pending.length})` : ""}` : `Manage${managed.length > 0 ? ` (${managed.length})` : ""}`}
               </button>
             ))}
           </div>
@@ -285,7 +314,7 @@ export default function AdminPage() {
                           {r.tweet_id && (
                             <a href={`https://twitter.com/i/web/status/${r.tweet_id}`} target="_blank" rel="noopener noreferrer"
                               className="text-[0.6rem] text-sky-500 dark:text-sky-400 hover:opacity-70 transition-opacity shrink-0">
-                              → tweet
+                              \u2192 tweet
                             </a>
                           )}
                         </div>
@@ -306,7 +335,6 @@ export default function AdminPage() {
                         <div className="flex items-center gap-2 justify-end">
                           {tab === "pending" && (
                             r.tweet_id ? (
-                              // Tweet-sourced recipe: Reply & Approve opens intent + approves in background
                               <button
                                 onClick={() => handleReplyApprove(r.slug, r.name, r.tweet_id!)}
                                 className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
@@ -314,7 +342,6 @@ export default function AdminPage() {
                                 Reply &amp; Approve
                               </button>
                             ) : (
-                              // Manual submission: standard approve
                               <button
                                 onClick={() => handleApprove(r.slug, r.name)}
                                 className="text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 py-1.5 rounded-full hover:opacity-75 transition-opacity"

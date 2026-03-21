@@ -5,6 +5,11 @@ const ERR      = { error: "Internal Server Error" };
 const PAGE_MAX = 50;
 const PAGE_DEF = 12;
 
+/** Normalise category to Title Case. */
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 /**
  * GET /api/recipes?q=&category=&sort=newest|popular&limit=12&offset=0
  * Only returns approved recipes.
@@ -28,7 +33,7 @@ export async function GET(req: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (q)        qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
-    if (category) qb = qb.eq("category", category);
+    if (category) qb = qb.eq("category", titleCase(category));
 
     if (sort === "newest") {
       qb = qb.order("featured",     { ascending: false });
@@ -72,8 +77,8 @@ export async function POST(req: NextRequest) {
       clicks:      0,
       approved:    false,
     };
-    if (category) row.category  = category;
-    if (tweet_id) row.tweet_id  = tweet_id;
+    if (category) row.category = titleCase(category);
+    if (tweet_id) row.tweet_id = tweet_id;
 
     const { error } = await sb.from("recipes").upsert(row, {
       onConflict:       "slug",

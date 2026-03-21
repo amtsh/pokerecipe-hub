@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { getSupabase } from "../../../../lib/supabase";
 
+/** Normalise a category string to Title Case (single-word categories). */
+function titleCase(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
 /**
  * GET /api/categories
- * Returns a sorted list of distinct non-null category values.
+ * Returns a sorted list of distinct non-null category values, normalised to Title Case.
  */
 export async function GET() {
   try {
@@ -13,6 +18,7 @@ export async function GET() {
     const { data, error } = await sb
       .from("recipes")
       .select("category")
+      .eq("approved", true)
       .not("category", "is", null)
       .not("category", "eq", "");
 
@@ -21,10 +27,12 @@ export async function GET() {
       return NextResponse.json({ categories: [] });
     }
 
-    // Array.from avoids the --downlevelIteration requirement of [...new Set(...)]
     const categories = Array.from(
       new Set(
-        (data ?? []).map((r) => r.category).filter((c): c is string => !!c)
+        (data ?? [])
+          .map((r) => r.category)
+          .filter((c): c is string => !!c)
+          .map(titleCase)
       )
     ).sort();
 
