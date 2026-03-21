@@ -1,9 +1,9 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-rule dark:border-darkBorder py-10 px-6 transition-colors">
-      <div className="max-w-wide mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <footer className="px-6 pt-6 pb-40">
+      <div className="max-w-wide mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-faint dark:text-darkFaint">
-          pokerecipe<span className="text-rule dark:text-darkBorder">.book</span> &mdash; community-built
+          pokerecipe<span className="opacity-40">.book</span>
         </p>
         <p className="text-xs text-faint dark:text-darkFaint">
           Recipes link to{" "}
@@ -11,7 +11,7 @@ export default function Footer() {
             href="https://poke.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-ink dark:text-white hover:text-muted dark:hover:text-darkMuted underline underline-offset-2 transition-colors"
+            className="text-ink dark:text-white hover:opacity-60 transition-opacity"
           >
             poke.com
           </a>
