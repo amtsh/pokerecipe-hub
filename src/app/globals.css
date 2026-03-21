@@ -21,6 +21,17 @@ input:-webkit-autofill {
   100% { transform: translateX(100%); }
 }
 
+/**
+ * iconPopIn — spring entry for the active icon in the grid/list toggle.
+ * Starts compressed + blurred, overshoots slightly (0.34,1.56 control points),
+ * then settles at scale(1) blur(0). Applied via inline style when an icon
+ * transitions from inactive → active.
+ */
+@keyframes iconPopIn {
+  from { opacity: 0; transform: scale(0.65); filter: blur(4px); }
+  to   { opacity: 1; transform: scale(1);    filter: blur(0);   }
+}
+
 /* Hide scrollbar but keep scroll functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;

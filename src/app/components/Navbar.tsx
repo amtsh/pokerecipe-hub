@@ -16,7 +16,7 @@ export default function Navbar() {
           <DarkModeToggle />
           <Link
             href="/submit"
-            className="text-sm font-medium bg-ink text-white dark:bg-white dark:text-ink px-4 py-1.5 rounded-full hover:opacity-75 transition-opacity"
+            className="text-sm font-medium bg-ink text-white dark:bg-white dark:text-ink px-4 py-1.5 rounded-full hover:opacity-75 active:scale-[0.96] transition-all duration-100"
           >
             Submit
           </Link>

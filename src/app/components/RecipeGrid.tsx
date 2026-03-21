@@ -33,34 +33,6 @@ function rowsToRecipes(rows: DBRow[]) {
   return { recipes, clickMap };
 }
 
-// ─ Toggle icons ───────────────────────────────────────────────────────────────
-
-function GridIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="currentColor" className="w-[15px] h-[15px]" aria-hidden>
-      <rect x="1" y="1" width="6" height="6" rx="1.25" />
-      <rect x="9" y="1" width="6" height="6" rx="1.25" />
-      <rect x="1" y="9" width="6" height="6" rx="1.25" />
-      <rect x="9" y="9" width="6" height="6" rx="1.25" />
-    </svg>
-  );
-}
-
-function ListIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="currentColor" className="w-[15px] h-[15px]" aria-hidden>
-      <rect x="1" y="2"   width="4" height="4"   rx="0.8" />
-      <rect x="7" y="3.5" width="8" height="1.5" rx="0.75" />
-      <rect x="1" y="7"   width="4" height="4"   rx="0.8" />
-      <rect x="7" y="8.5" width="8" height="1.5" rx="0.75" />
-      <rect x="1" y="12"  width="4" height="2.5" rx="0.8" />
-      <rect x="7" y="13" width="8" height="1.5" rx="0.75" />
-    </svg>
-  );
-}
-
-// ─ Component ───────────────────────────────────────────────────────────────────
-
 interface RecipeGridProps {
   initialRecipes?:  Recipe[];
   initialClickMap?: Record<string, number>;
@@ -87,10 +59,10 @@ export default function RecipeGrid({
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
-  // View toggle state — seeded from cookie via SSR prop to avoid layout shift
-  const [view, setView]           = useState<"grid" | "list">(initialView);
-  const [fading, setFading]       = useState(false);
-  const fadeTimer                 = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // View toggle state \u2014 seeded from cookie via SSR prop to avoid layout shift
+  const [view, setView]     = useState<"grid" | "list">(initialView);
+  const [fading, setFading] = useState(false);
+  const fadeTimer           = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isFirstRender = useRef(true);
   const searchRef     = useRef<HTMLInputElement>(null);
@@ -179,14 +151,21 @@ export default function RecipeGrid({
     fadeTimer.current = setTimeout(() => {
       setView(newView);
       setFading(false);
-      // Persist preference to cookie (1 year, lax)
       document.cookie = `recipe_view=${newView};path=/;max-age=31536000;samesite=lax`;
     }, 150);
   }
 
+  function clearFilters() {
+    setQuery("");
+    setActiveCategory(null);
+    router.replace("/", { scroll: false });
+  }
+
   const isFiltered = query.trim().length > 0 || !!activeCategory;
 
-  const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 whitespace-nowrap";
+  // active:scale-[0.95] on pills for tactile press feedback (75ms \u2014 fast enough
+  // to feel immediate, not so fast it clips the hover color transition)
+  const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 active:scale-[0.95] whitespace-nowrap";
   const pillActive   = "bg-ink text-white dark:bg-white dark:text-ink";
   const pillInactive = "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white";
 
@@ -196,7 +175,7 @@ export default function RecipeGrid({
 
         {/* Section header: results count + view toggle */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 h-7">
-          {/* Results label — shown only when filtering */}
+          {/* Results label \u2014 shown only when filtering */}
           <span className="text-xs text-faint dark:text-darkFaint">
             {isFiltered && !loading
               ? (
@@ -209,12 +188,18 @@ export default function RecipeGrid({
               : null}
           </span>
 
-          {/* Segmented view toggle */}
+          {/* Segmented view toggle
+              The SVG key changes on every view switch, causing React to remount
+              just the SVG element. When the new icon is the active one it
+              receives the iconPopIn animation via inline style, giving it the
+              spring pop-in from globals.css. The inactive icon remounts without
+              animation \u2014 only the incoming active icon animates. */}
           <div
             className="flex items-center gap-0.5 bg-lift dark:bg-darkInput rounded-[8px] p-[3px]"
             role="group"
             aria-label="Recipe view"
           >
+            {/* Grid button */}
             <button
               onClick={() => handleToggleView("grid")}
               title="Grid view"
@@ -225,8 +210,22 @@ export default function RecipeGrid({
                   : "text-muted/50 dark:text-white/30 hover:text-muted dark:hover:text-white/60"
               }`}
             >
-              <GridIcon />
+              <svg
+                key={`grid-${view}`}
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-[15px] h-[15px]"
+                style={view === "grid" ? { animation: "iconPopIn 200ms cubic-bezier(0.34,1.56,0.64,1) both" } : undefined}
+                aria-hidden
+              >
+                <rect x="1" y="1" width="6" height="6" rx="1.25" />
+                <rect x="9" y="1" width="6" height="6" rx="1.25" />
+                <rect x="1" y="9" width="6" height="6" rx="1.25" />
+                <rect x="9" y="9" width="6" height="6" rx="1.25" />
+              </svg>
             </button>
+
+            {/* List button */}
             <button
               onClick={() => handleToggleView("list")}
               title="List view"
@@ -237,15 +236,29 @@ export default function RecipeGrid({
                   : "text-muted/50 dark:text-white/30 hover:text-muted dark:hover:text-white/60"
               }`}
             >
-              <ListIcon />
+              <svg
+                key={`list-${view}`}
+                viewBox="0 0 16 16"
+                fill="currentColor"
+                className="w-[15px] h-[15px]"
+                style={view === "list" ? { animation: "iconPopIn 200ms cubic-bezier(0.34,1.56,0.64,1) both" } : undefined}
+                aria-hidden
+              >
+                <rect x="1" y="2"   width="4" height="4"   rx="0.8" />
+                <rect x="7" y="3.5" width="8" height="1.5" rx="0.75" />
+                <rect x="1" y="7"   width="4" height="4"   rx="0.8" />
+                <rect x="7" y="8.5" width="8" height="1.5" rx="0.75" />
+                <rect x="1" y="12"  width="4" height="2.5" rx="0.8" />
+                <rect x="7" y="13"  width="8" height="1.5" rx="0.75" />
+              </svg>
             </button>
           </div>
         </div>
 
-        {/* Content area — fades when switching views */}
+        {/* Content area \u2014 fades when switching views */}
         <div className={`transition-opacity duration-150 ${fading ? "opacity-0" : "opacity-100"}`}>
 
-          {/* ─ Grid view ───────────────────────────────────────── */}
+          {/* \u2500 Grid view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {view === "grid" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -270,7 +283,7 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* ─ List view ───────────────────────────────────────── */}
+          {/* \u2500 List view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {view === "list" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -284,7 +297,7 @@ export default function RecipeGrid({
                 <div className="border border-rule dark:border-darkBorder rounded-2xl overflow-hidden divide-y divide-rule dark:divide-darkBorder">
                   {Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3.5 px-4 py-3 animate-pulse">
-                      <div className="w-[42px] h-[42px] rounded-[10px] bg-lift dark:bg-darkInput shrink-0" />
+                      <div className="w-[42px] h-[42px] rounded-[12px] bg-lift dark:bg-darkInput shrink-0" />
                       <div className="flex-1 space-y-2">
                         <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-2/5" />
                         <div className="h-2.5 bg-lift dark:bg-darkInput rounded-full w-3/4" />
@@ -297,15 +310,48 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* Empty state (shared) */}
+          {/* \u2500 Polished empty state (shared across grid + list) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
           {!loading && recipes.length === 0 && (
-            <div className="text-center py-24">
-              <p className="text-xs text-muted dark:text-darkMuted mb-3">
-                {isFiltered ? "No recipes match." : "No recipes yet."}
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              {/* Branded \u201cp\u201d monogram in a lift box \u2014 same visual language as the
+                  RecipeCard image error placeholder, making the empty state feel
+                  deliberate rather than broken. translateY(2px) compensates for the
+                  descender so the letter reads as optically centered. */}
+              <div className="w-16 h-16 rounded-2xl bg-lift dark:bg-darkInput flex items-center justify-center mb-5">
+                <span
+                  className="text-3xl font-semibold select-none text-muted/30 dark:text-white/15"
+                  style={{ transform: "translateY(2px)" }}
+                  aria-hidden
+                >
+                  p
+                </span>
+              </div>
+
+              <p className="text-sm font-semibold tracking-tight text-ink dark:text-white mb-1.5">
+                {isFiltered ? "Nothing here yet" : "No recipes yet"}
               </p>
-              {!isFiltered && (
-                <a href="/submit" className="text-xs text-ink dark:text-white underline underline-offset-2">
-                  Be the first
+
+              <p className="text-xs text-muted dark:text-darkMuted mb-6 max-w-[210px] leading-relaxed">
+                {isFiltered
+                  ? "Try a different category or clear the search"
+                  : "Be the first to share a Poke automation recipe"}
+              </p>
+
+              {isFiltered ? (
+                // Clear-filters action when search/category yields nothing
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-medium text-muted dark:text-darkMuted bg-lift dark:bg-darkInput px-4 py-2 rounded-full hover:text-ink dark:hover:text-white hover:bg-black/[0.07] dark:hover:bg-white/[0.1] active:scale-[0.96] transition-all duration-75"
+                >
+                  Clear filters
+                </button>
+              ) : (
+                // Pill CTA for the genuinely empty state
+                <a
+                  href="/submit"
+                  className="text-xs font-medium text-white bg-ink dark:text-ink dark:bg-white hover:opacity-80 active:scale-[0.96] px-4 py-2 rounded-full transition-all duration-75"
+                >
+                  Add the first recipe \u2192
                 </a>
               )}
             </div>
@@ -313,13 +359,13 @@ export default function RecipeGrid({
 
         </div>{/* /fade wrapper */}
 
-        {/* Load more */}
+        {/* Load more \u2014 active:scale-[0.96] for press feedback */}
         {!loading && hasMore && recipes.length > 0 && (
           <div className="flex justify-center mt-16 sm:mt-20">
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="text-xs font-medium text-ink/50 dark:text-white/50 hover:text-ink dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] px-6 py-2.5 rounded-full transition-all duration-150 disabled:opacity-40"
+              className="text-xs font-medium text-ink/50 dark:text-white/50 hover:text-ink dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] px-6 py-2.5 rounded-full active:scale-[0.96] transition-all duration-75 disabled:opacity-40"
             >
               {loadingMore ? "Loading\u2026" : "Load More"}
             </button>

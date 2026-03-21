@@ -63,12 +63,15 @@ export default function RecipeCard({
   }
 
   return (
-    <article className="hover:scale-[1.01] active:scale-[0.99] transition-transform duration-200 ease-out">
-      {/* Image — links directly to poke.com */}
+    // Press scale: 0.97 (perceptible) with fast 75ms response time
+    <article className="hover:scale-[1.01] active:scale-[0.97] transition-transform duration-75 ease-out">
+      {/* Image \u2014 links directly to poke.com */}
       <a href={pokeUrl} target="_blank" rel="noopener noreferrer" className="block">
         <div className="relative w-full aspect-video rounded-2xl sm:rounded-3xl overflow-hidden bg-lift dark:bg-darkInput mb-3">
           {recipe.featured && (
-            <span className="absolute top-3 left-3 z-10 text-[0.55rem] tracking-widest uppercase font-bold bg-ink/80 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-full">
+            // Concentric radius: outer container is rounded-3xl (24px), badge sits at
+            // top-3 left-3 (12px from corner) \u2192 inner radius = 24 - 12 = 12px = rounded-xl
+            <span className="absolute top-3 left-3 z-10 text-[0.55rem] tracking-widest uppercase font-bold bg-ink/80 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-xl">
               &#9733; Featured
             </span>
           )}
@@ -87,7 +90,7 @@ export default function RecipeCard({
           {/* Branded placeholder on error */}
           {imgState === "error" && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-5xl font-semibold select-none" style={{ color: "#e8e8e8" }} aria-hidden>p</span>
+              <span className="text-5xl font-semibold select-none" style={{ color: "#e8e8e8", transform: "translateY(2px)" }} aria-hidden>p</span>
             </div>
           )}
 
@@ -122,7 +125,9 @@ export default function RecipeCard({
             </span>
           )}
           {localClicks > 0 && (
-            <span className="text-[0.65rem] text-faint dark:text-darkFaint">
+            // tabular-nums: each digit occupies equal width so live count
+            // updates don\u2019t cause horizontal layout jitter
+            <span className="text-[0.65rem] text-faint dark:text-darkFaint tabular-nums">
               {localClicks.toLocaleString()} views
             </span>
           )}
@@ -132,7 +137,7 @@ export default function RecipeCard({
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleViewRecipe}
-          className="shrink-0 text-[0.7rem] font-medium text-ink/50 dark:text-white/50 bg-black/[0.05] dark:bg-white/[0.08] hover:bg-ink hover:text-white dark:hover:bg-white dark:hover:text-ink px-3 py-1.5 rounded-full transition-all duration-150"
+          className="shrink-0 text-[0.7rem] font-medium text-ink/50 dark:text-white/50 bg-black/[0.05] dark:bg-white/[0.08] hover:bg-ink hover:text-white dark:hover:bg-white dark:hover:text-ink px-3 py-1.5 rounded-full active:scale-[0.96] transition-all duration-75"
         >
           View
         </a>
