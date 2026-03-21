@@ -4,19 +4,24 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://pokerecipe.book"),
   title: {
-    default: "pokerecipe.book",
+    default:  "pokerecipe.book",
     template: "%s | pokerecipe.book",
   },
   description:
-    "Discover and add community-built Poke recipes. One click to automate your day.",
+    "The community-powered index for Poke automation recipes. Discover, share, and track the most useful automations.",
   openGraph: {
-    siteName: "pokerecipe.book",
-    type: "website",
-    locale: "en_US",
+    siteName:    "pokerecipe.book",
+    title:       "pokerecipe.book",
+    description: "The community-powered index for Poke automation recipes. Discover, share, and track the most useful automations.",
+    type:        "website",
+    locale:      "en_US",
+    url:         "https://pokerecipe.book",
   },
   twitter: {
-    card: "summary_large_image",
-    site: "@poke",
+    card:        "summary_large_image",
+    site:        "@interaction",
+    title:       "pokerecipe.book",
+    description: "The community-powered index for Poke automation recipes.",
   },
   robots: { index: true, follow: true },
 };
