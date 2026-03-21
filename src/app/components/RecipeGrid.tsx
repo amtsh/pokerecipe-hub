@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import RecipeCard, { type Recipe } from "./RecipeCard";
+
+const PAGE_SIZE = 12;
 
 interface DBRow {
   slug: string;
@@ -18,7 +20,7 @@ function rowsToRecipes(rows: DBRow[]) {
     name:        r.name        || r.slug,
     description: r.description || "",
     slug:        r.slug,
-    author:      "Amit Shinde",
+    author:      "",
     tags:        [],
     featured:    r.featured   ?? false,
     category:    r.category   ?? undefined,
@@ -39,16 +41,25 @@ export default function RecipeGrid({
   initialRecipes = [],
   initialClickMap = {},
 }: RecipeGridProps) {
+  // Core list state — starts from server-rendered initial data
+  const [recipes, setRecipes]     = useState<Recipe[]>(initialRecipes);
+  const [clickMap, setClickMap]   = useState<Record<string, number>>(initialClickMap);
+  const [offset, setOffset]       = useState<number>(initialRecipes.length);
+  const [hasMore, setHasMore]     = useState<boolean>(initialRecipes.length >= PAGE_SIZE);
+
+  // Loading states
+  const [loading, setLoading]         = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Filters — default sort is "popular" (Top)
   const [query, setQuery]                   = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [sort, setSort]                     = useState<SortOption>("newest");
+  const [sort, setSort]                     = useState<SortOption>("popular");
   const [categories, setCategories]         = useState<string[]>([]);
-  const [displayRecipes, setDisplayRecipes] = useState<Recipe[] | null>(null);
-  const [displayClickMap, setDisplayClickMap] = useState<Record<string, number>>({});
-  const [loading, setLoading]               = useState(false);
-  const [localClickMap, setLocalClickMap]   = useState<Record<string, number>>(initialClickMap);
 
-  // Fetch categories for filter pills
+  const isFirstRender = useRef(true);
+
+  // Fetch category pills
   useEffect(() => {
     fetch("/api/categories")
       .then((r) => r.json())
@@ -58,64 +69,68 @@ export default function RecipeGrid({
       .catch(() => {});
   }, []);
 
-  // Fallback click map when no server data
-  useEffect(() => {
-    if (Object.keys(initialClickMap).length > 0) return;
-    fetch("/api/click")
-      .then((r) => r.json())
-      .then(({ data }: { data?: { slug: string; clicks: number }[] }) => {
-        if (!data) return;
-        const map: Record<string, number> = {};
-        for (const row of data) map[row.slug] = row.clicks;
-        setLocalClickMap(map);
-      })
-      .catch(() => {});
-  }, [initialClickMap]);
-
-  const runFetch = useCallback(async (
+  // Core fetch: handles both fresh loads and Load More appends
+  async function doFetch(
     q: string,
     category: string | null,
-    sortBy: SortOption,
-  ) => {
-    const params = new URLSearchParams();
-    if (q)        params.set("q", q);
-    if (category) params.set("category", category);
-    if (sortBy !== "newest") params.set("sort", sortBy);
+    s: SortOption,
+    off: number,
+    append: boolean,
+  ) {
+    if (append) setLoadingMore(true);
+    else        setLoading(true);
     try {
+      const params = new URLSearchParams();
+      if (q)        params.set("q", q);
+      if (category) params.set("category", category);
+      params.set("sort",   s);
+      params.set("limit",  String(PAGE_SIZE));
+      params.set("offset", String(off));
+
       const res = await fetch(`/api/recipes?${params}`);
-      if (!res.ok) { setDisplayRecipes([]); return; }
+      if (!res.ok) { if (!append) setRecipes([]); return; }
       const { data } = await res.json() as { data?: DBRow[] };
-      const { recipes, clickMap } = rowsToRecipes(data ?? []);
-      setDisplayRecipes(recipes);
-      setDisplayClickMap(clickMap);
+      const rows = data ?? [];
+      const { recipes: newRecs, clickMap: newMap } = rowsToRecipes(rows);
+
+      if (append) {
+        setRecipes((prev) => [...prev, ...newRecs]);
+        setClickMap((prev) => ({ ...prev, ...newMap }));
+      } else {
+        setRecipes(newRecs);
+        setClickMap(newMap);
+      }
+      const nextOffset = off + rows.length;
+      setOffset(nextOffset);
+      setHasMore(rows.length >= PAGE_SIZE);
     } catch {
-      setDisplayRecipes([]);
+      if (!append) setRecipes([]);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, []);
+  }
 
-  // Re-fetch whenever filters change
+  // Re-fetch on any filter change; skip first render (server data handles that)
   useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    setOffset(0);
+    setHasMore(true);
     const trimmed = query.trim();
-    // If all defaults, revert to server-provided initial data
-    if (!trimmed && !activeCategory && sort === "newest") {
-      setDisplayRecipes(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    const timer = setTimeout(() => runFetch(trimmed, activeCategory, sort), 300);
+    const timer = setTimeout(() => doFetch(trimmed, activeCategory, sort, 0, false), 300);
     return () => clearTimeout(timer);
-  }, [query, activeCategory, sort, runFetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, activeCategory, sort]);
 
-  const isFiltered     = query.trim() || activeCategory || sort !== "newest";
-  const displayed      = displayRecipes !== null ? displayRecipes : initialRecipes;
-  const displayClicks  = displayRecipes !== null ? displayClickMap : localClickMap;
+  function handleLoadMore() {
+    doFetch(query.trim(), activeCategory, sort, offset, true);
+  }
 
   function handleCategory(cat: string | null) {
     setActiveCategory((prev) => (prev === cat ? null : cat));
   }
+
+  const isFiltered = query.trim().length > 0 || !!activeCategory || sort !== "popular";
 
   return (
     <section id="browse" className="max-w-wide mx-auto px-4 sm:px-6 pb-24 sm:pb-32">
@@ -127,10 +142,9 @@ export default function RecipeGrid({
         <div className="h-px flex-1 bg-rule dark:bg-darkBorder" />
       </div>
 
-      {/* Search + Sort row */}
+      {/* Search + Sort */}
       <div className="max-w-content mx-auto mb-4">
         <div className="flex items-center gap-2">
-          {/* Search */}
           <div className="relative flex-1">
             <input
               type="text"
@@ -152,7 +166,7 @@ export default function RecipeGrid({
           </div>
           {/* Sort toggle */}
           <div className="flex items-center gap-0.5 bg-lift dark:bg-darkInput border border-rule dark:border-darkBorder rounded-full p-0.5 shrink-0">
-            {(["newest", "popular"] as SortOption[]).map((s) => (
+            {(["popular", "newest"] as SortOption[]).map((s) => (
               <button
                 key={s}
                 onClick={() => setSort(s)}
@@ -162,7 +176,7 @@ export default function RecipeGrid({
                     : "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white"
                 }`}
               >
-                {s === "newest" ? "New" : "Top"}
+                {s === "popular" ? "Top" : "New"}
               </button>
             ))}
           </div>
@@ -200,30 +214,31 @@ export default function RecipeGrid({
         </div>
       )}
 
-      {/* Status */}
-      {isFiltered && (
+      {/* Status line */}
+      {isFiltered && !loading && (
         <p className="text-xs text-faint dark:text-darkFaint mb-6 max-w-content mx-auto">
-          {loading ? (
-            <span className="animate-pulse">Searching&hellip;</span>
-          ) : (
-            <>{displayed.length} result{displayed.length !== 1 ? "s" : ""}</>
-          )}
+          {recipes.length} result{recipes.length !== 1 ? "s" : ""}
+          {query.trim() ? <> for &ldquo;{query.trim()}&rdquo;</> : null}
         </p>
       )}
 
       {/* Grid */}
-      {!loading && displayed.length > 0 && (
+      {!loading && recipes.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {displayed.map((recipe) => (
-            <RecipeCard key={recipe.slug} recipe={recipe} clicks={displayClicks[recipe.slug] ?? 0} />
+          {recipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.slug}
+              recipe={recipe}
+              clicks={clickMap[recipe.slug] ?? 0}
+            />
           ))}
         </div>
       )}
 
-      {/* Skeleton */}
+      {/* Skeleton while loading fresh */}
       {loading && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {Array.from({ length: 3 }).map((_, i) => (
+          {Array.from({ length: PAGE_SIZE }).map((_, i) => (
             <div key={i} className="bg-white dark:bg-darkSurface rounded-2xl overflow-hidden shadow-sm border border-rule/60 dark:border-darkBorder animate-pulse">
               <div className="px-3 pt-3 pb-7">
                 <div className="aspect-video w-full rounded-sm bg-lift dark:bg-darkInput" />
@@ -238,17 +253,33 @@ export default function RecipeGrid({
         </div>
       )}
 
-      {/* Empty */}
-      {!loading && displayed.length === 0 && (
+      {/* Empty state */}
+      {!loading && recipes.length === 0 && (
         <div className="text-center py-20">
           <p className="text-sm text-muted dark:text-darkMuted mb-2">
             {isFiltered ? "No recipes match your filters." : "No recipes yet."}
           </p>
-          <a href="/submit" className="text-sm text-ink dark:text-white underline underline-offset-2">
-            {isFiltered ? "Clear filters" : "Be the first to submit one"}
-          </a>
+          {!isFiltered && (
+            <a href="/submit" className="text-sm text-ink dark:text-white underline underline-offset-2">
+              Be the first to submit one
+            </a>
+          )}
         </div>
       )}
+
+      {/* Load More */}
+      {!loading && hasMore && recipes.length > 0 && (
+        <div className="flex justify-center mt-10">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="text-sm font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-6 py-2.5 rounded-full hover:border-ink/30 dark:hover:border-white/20 hover:text-ink dark:hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loadingMore ? "Loading\u2026" : "Load More"}
+          </button>
+        </div>
+      )}
+
     </section>
   );
 }

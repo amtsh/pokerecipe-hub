@@ -1,32 +1,14 @@
 import type { MetadataRoute } from "next";
-import { getSupabase } from "../../lib/supabase";
 
 const BASE = "https://pokerecipe.book";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const staticPages: MetadataRoute.Sitemap = [
+/**
+ * Sitemap only includes top-level pages.
+ * Recipe detail pages were removed — all recipe links now point directly to poke.com.
+ */
+export default function sitemap(): MetadataRoute.Sitemap {
+  return [
     { url: BASE,             lastModified: new Date(), changeFrequency: "daily",   priority: 1.0 },
     { url: `${BASE}/submit`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
   ];
-
-  try {
-    const sb = getSupabase();
-    if (!sb) return staticPages;
-
-    const { data } = await sb
-      .from("recipes")
-      .select("slug, submitted_at")
-      .order("submitted_at", { ascending: false });
-
-    const recipePages: MetadataRoute.Sitemap = (data ?? []).map((r) => ({
-      url:             `${BASE}/r/${r.slug}`,
-      lastModified:    r.submitted_at ? new Date(r.submitted_at) : new Date(),
-      changeFrequency: "weekly" as const,
-      priority:        0.8,
-    }));
-
-    return [...staticPages, ...recipePages];
-  } catch {
-    return staticPages;
-  }
 }

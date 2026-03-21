@@ -16,13 +16,13 @@ async function getTopRecipes(): Promise<{
     const sb = getSupabase();
     if (!sb) return { recipes: [], clickMap: {} };
 
+    // Default view: Top 12, sorted by popularity (clicks DESC)
     const { data, error } = await sb
       .from("recipes")
       .select("slug, name, description, clicks, featured, category")
       .eq("approved", true)
-      .order("featured",     { ascending: false })
-      .order("submitted_at", { ascending: false })
-      .limit(10);
+      .order("clicks", { ascending: false })
+      .range(0, 11); // limit 12
 
     if (error || !data || data.length === 0) return { recipes: [], clickMap: {} };
 
@@ -31,10 +31,10 @@ async function getTopRecipes(): Promise<{
       name:        r.name        || r.slug,
       description: r.description || "",
       slug:        r.slug,
-      author:      "Amit Shinde",
+      author:      "",
       tags:        [],
-      featured:    r.featured  ?? false,
-      category:    r.category  ?? undefined,
+      featured:    r.featured ?? false,
+      category:    r.category ?? undefined,
     }));
 
     const clickMap: Record<string, number> = {};

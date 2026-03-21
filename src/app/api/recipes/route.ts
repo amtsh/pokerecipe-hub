@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "../../../../lib/supabase";
 
-const ERR = { error: "Internal Server Error" };
+const ERR      = { error: "Internal Server Error" };
+const PAGE_MAX = 50;
+const PAGE_DEF = 12;
 
 /**
- * GET /api/recipes?q=&category=&sort=newest|popular
+ * GET /api/recipes?q=&category=&sort=newest|popular&limit=12&offset=0
  * Only returns approved recipes.
  */
 export async function GET(req: NextRequest) {
@@ -15,23 +17,25 @@ export async function GET(req: NextRequest) {
     const { searchParams } = req.nextUrl;
     const q        = searchParams.get("q")?.trim()        ?? "";
     const category = searchParams.get("category")?.trim() ?? "";
-    const sort     = searchParams.get("sort")             ?? "newest";
-    const isFiltered = q || category || sort === "popular";
+    const sort     = searchParams.get("sort")             ?? "popular";
+    const limit    = Math.min(Math.max(parseInt(searchParams.get("limit")  ?? String(PAGE_DEF), 10) || PAGE_DEF, 1), PAGE_MAX);
+    const offset   = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0);
 
     let qb = sb
       .from("recipes")
       .select("slug, name, description, clicks, featured, category")
       .eq("approved", true)
-      .limit(isFiltered ? 20 : 10);
+      .range(offset, offset + limit - 1);
 
     if (q)        qb = qb.or(`name.ilike.%${q}%,description.ilike.%${q}%`);
     if (category) qb = qb.eq("category", category);
 
-    if (sort === "popular") {
-      qb = qb.order("clicks", { ascending: false });
-    } else {
+    if (sort === "newest") {
       qb = qb.order("featured",     { ascending: false });
       qb = qb.order("submitted_at", { ascending: false });
+    } else {
+      // default: popular (clicks DESC)
+      qb = qb.order("clicks", { ascending: false });
     }
 
     const { data, error } = await qb;
@@ -49,7 +53,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/recipes  { slug, name, description, category? }
- * Inserts with approved=false (requires admin approval before appearing on homepage).
+ * Inserts with approved=false (requires admin approval).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -68,7 +72,7 @@ export async function POST(req: NextRequest) {
       name:        name        || slug,
       description: description || "",
       clicks:      0,
-      approved:    false,   // requires admin approval
+      approved:    false,
     };
     if (category) row.category = category;
 
