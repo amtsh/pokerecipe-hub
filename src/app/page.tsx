@@ -7,7 +7,7 @@ import { getSupabase } from "../../lib/supabase";
 
 export const dynamic = "force-dynamic";
 
-async function getLatestRecipes(): Promise<{
+async function getTopRecipes(): Promise<{
   recipes: Recipe[];
   clickMap: Record<string, number>;
 }> {
@@ -17,7 +17,9 @@ async function getLatestRecipes(): Promise<{
 
     const { data, error } = await sb
       .from("recipes")
-      .select("slug, name, description, clicks")
+      .select("slug, name, description, clicks, featured")
+      // Featured recipes float to the top, then newest first
+      .order("featured", { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(10);
 
@@ -30,6 +32,7 @@ async function getLatestRecipes(): Promise<{
       slug:        r.slug,
       author:      "community",
       tags:        [],
+      featured:    r.featured ?? false,
     }));
 
     const clickMap: Record<string, number> = {};
@@ -42,7 +45,7 @@ async function getLatestRecipes(): Promise<{
 }
 
 export default async function Home() {
-  const { recipes, clickMap } = await getLatestRecipes();
+  const { recipes, clickMap } = await getTopRecipes();
 
   return (
     <>

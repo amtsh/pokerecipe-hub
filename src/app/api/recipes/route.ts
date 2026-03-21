@@ -4,9 +4,9 @@ import { getSupabase } from "../../../../lib/supabase";
 const ERR = { error: "Internal Server Error" };
 
 /**
- * GET /api/recipes?q=<optional search term>
- * Without q: 10 most recently submitted recipes.
- * With q:    case-insensitive search across name + description, up to 20 results.
+ * GET /api/recipes?q=<optional>
+ * Without q: 10 most recent (featured first, then submitted_at DESC).
+ * With q:    ilike search across name + description, up to 20 results.
  */
 export async function GET(req: NextRequest) {
   try {
@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
 
     let queryBuilder = sb
       .from("recipes")
-      .select("slug, name, description, clicks")
+      .select("slug, name, description, clicks, featured")
+      .order("featured", { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(q ? 20 : 10);
 
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/recipes  { slug, name, description }
- * Saves recipe metadata. url is NOT stored — derived from slug on the frontend.
+ * Saves a new recipe. featured defaults to false in the DB.
  * Re-submitting an existing slug is a no-op (ignoreDuplicates).
  */
 export async function POST(req: NextRequest) {
@@ -60,6 +61,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error } = await sb.from("recipes").upsert(
+      // featured is intentionally omitted — DB defaults it to false
       { slug, name: name || slug, description: description || "", clicks: 0 },
       { onConflict: "slug", ignoreDuplicates: true }
     );

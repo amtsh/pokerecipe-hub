@@ -9,6 +9,7 @@ export interface Recipe {
   slug: string;
   author: string;
   tags: string[];
+  featured?: boolean;
 }
 
 export default function RecipeCard({
@@ -42,8 +43,15 @@ export default function RecipeCard({
 
   return (
     <article className="group flex flex-col border border-rule dark:border-darkBorder rounded-2xl p-4 sm:p-6 bg-canvas dark:bg-darkSurface hover:border-ink/20 dark:hover:border-white/10 hover:shadow-[0_2px_16px_rgba(0,0,0,0.06)] dark:hover:shadow-[0_2px_20px_rgba(0,0,0,0.4)] transition-all duration-200">
-      {recipe.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3 sm:mb-4">
+
+      {/* Featured badge + tags row */}
+      {(recipe.featured || recipe.tags.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3 sm:mb-4">
+          {recipe.featured && (
+            <span className="text-[0.6rem] tracking-widest uppercase font-semibold text-ink dark:text-white border border-ink/30 dark:border-white/30 px-2 py-0.5 rounded-full">
+              &#9733; Featured
+            </span>
+          )}
           {recipe.tags.map((tag) => (
             <span
               key={tag}
