@@ -18,7 +18,6 @@ async function getTopRecipes(): Promise<{
     const { data, error } = await sb
       .from("recipes")
       .select("slug, name, description, clicks, featured")
-      // Featured recipes float to the top, then newest first
       .order("featured", { ascending: false })
       .order("submitted_at", { ascending: false })
       .limit(10);
@@ -30,7 +29,7 @@ async function getTopRecipes(): Promise<{
       name:        r.name        || r.slug,
       description: r.description || "",
       slug:        r.slug,
-      author:      "community",
+      author:      "Amit Shinde",
       tags:        [],
       featured:    r.featured ?? false,
     }));

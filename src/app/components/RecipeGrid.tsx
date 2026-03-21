@@ -17,7 +17,7 @@ function rowsToRecipes(rows: DBRow[]) {
     name:        r.name        || r.slug,
     description: r.description || "",
     slug:        r.slug,
-    author:      "community",
+    author:      "Amit Shinde",
     tags:        [],
     featured:    r.featured ?? false,
   }));
@@ -35,7 +35,6 @@ export default function RecipeGrid({
   initialRecipes = [],
   initialClickMap = {},
 }: RecipeGridProps) {
-  // No SAMPLE_RECIPES fallback — show DB data only (or empty state)
   const baseRecipes = initialRecipes;
 
   const [query, setQuery]                   = useState("");
@@ -129,7 +128,7 @@ export default function RecipeGrid({
 
       {/* Grid */}
       {!searching && displayed.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {displayed.map((recipe) => (
             <RecipeCard key={recipe.slug} recipe={recipe} clicks={displayClicks[recipe.slug] ?? 0} />
           ))}
@@ -138,13 +137,17 @@ export default function RecipeGrid({
 
       {/* Skeleton */}
       {searching && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="border border-rule dark:border-darkBorder rounded-2xl p-4 sm:p-6 animate-pulse">
-              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-1/3 mb-4" />
-              <div className="h-4 bg-lift dark:bg-darkInput rounded-full w-2/3 mb-3" />
-              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full mb-2" />
-              <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
+            <div key={i} className="bg-white dark:bg-darkSurface rounded-2xl overflow-hidden shadow-sm border border-rule/60 dark:border-darkBorder animate-pulse">
+              <div className="px-3 pt-3 pb-7">
+                <div className="aspect-video w-full rounded-sm bg-lift dark:bg-darkInput" />
+              </div>
+              <div className="px-4 pb-4 space-y-2">
+                <div className="h-4 bg-lift dark:bg-darkInput rounded-full w-2/3" />
+                <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-full" />
+                <div className="h-3 bg-lift dark:bg-darkInput rounded-full w-4/5" />
+              </div>
             </div>
           ))}
         </div>

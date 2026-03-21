@@ -22,7 +22,8 @@ export default function RecipeCard({
   clicks?: number;
 }) {
   const pokeUrl  = `https://poke.com/r/${recipe.slug}`;
-  const ogImgUrl = `https://poke.com/api/og/recipe?slug=${recipe.slug}`;
+  // Correct OG image endpoint for Poke recipes
+  const ogImgUrl = `https://poke.com/r/${recipe.slug}/og`;
 
   const [localClicks, setLocalClicks] = useState(clicks);
   const [tracking, setTracking]       = useState(false);
@@ -47,63 +48,64 @@ export default function RecipeCard({
   }
 
   return (
-    <article className="group flex flex-col border border-rule dark:border-darkBorder rounded-2xl overflow-hidden bg-canvas dark:bg-darkSurface hover:border-ink/20 dark:hover:border-white/10 hover:shadow-[0_4px_24px_rgba(0,0,0,0.08)] dark:hover:shadow-[0_4px_28px_rgba(0,0,0,0.5)] transition-all duration-200">
+    <article className="group flex flex-col bg-white dark:bg-darkSurface rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] overflow-hidden border border-rule/60 dark:border-darkBorder transition-shadow duration-200 hover:shadow-[0_6px_24px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_6px_32px_rgba(0,0,0,0.6)]">
 
-      {/* ── OG image area ─────────────────────────────────────────── */}
-      <div className="relative w-full aspect-video bg-lift dark:bg-darkInput overflow-hidden">
-        {/* Skeleton shimmer — visible while loading or on error */}
-        {imgState !== "loaded" && (
-          <div className="absolute inset-0 flex flex-col justify-end p-4">
-            {imgState === "loading" && (
-              <>
-                {/* Animated shimmer overlay */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 dark:via-white/5 to-transparent animate-[shimmer_1.6s_infinite]" />
-                {/* Name + description placeholder */}
-                <div className="relative space-y-2">
-                  <div className="h-4 bg-rule dark:bg-darkBorder rounded-full w-2/3 animate-pulse" />
-                  <div className="h-3 bg-rule dark:bg-darkBorder rounded-full w-full animate-pulse" />
-                  <div className="h-3 bg-rule dark:bg-darkBorder rounded-full w-4/5 animate-pulse" />
-                </div>
-              </>
-            )}
-            {imgState === "error" && (
-              /* Text fallback when OG image is unavailable */
-              <div className="relative p-1">
-                <p className="text-sm font-semibold text-ink dark:text-white leading-snug line-clamp-2">
-                  {recipe.name}
-                </p>
-                {recipe.description && (
-                  <p className="text-xs text-muted dark:text-darkMuted mt-1 line-clamp-3 leading-relaxed">
-                    {recipe.description}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+      {/* ─── Polaroid frame — equal side/top padding, wider bottom strip ─── */}
+      <div className="relative px-3 pt-3 pb-7 bg-white dark:bg-darkSurface">
 
-        {/* Actual OG image */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={ogImgUrl}
-          alt={recipe.name}
-          onLoad={() => setImgState("loaded")}
-          onError={() => setImgState("error")}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
-            imgState === "loaded" ? "opacity-100" : "opacity-0"
-          }`}
-        />
-
-        {/* Featured badge — top-left overlay */}
+        {/* Featured stamp — top-left corner over image */}
         {recipe.featured && (
-          <span className="absolute top-3 left-3 text-[0.6rem] tracking-widest uppercase font-semibold bg-ink/80 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-full">
+          <span className="absolute top-5 left-5 z-10 text-[0.55rem] tracking-widest uppercase font-bold bg-ink/85 dark:bg-white/90 text-white dark:text-ink backdrop-blur-sm px-2 py-0.5 rounded-full">
             &#9733; Featured
           </span>
         )}
+
+        {/* Image container */}
+        <div className="relative w-full aspect-video rounded-sm overflow-hidden bg-lift dark:bg-darkInput">
+
+          {/* Shimmer skeleton */}
+          {imgState === "loading" && (
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute inset-0 bg-lift dark:bg-darkInput" />
+              <div
+                className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_ease-in-out_infinite]"
+                style={{
+                  background:
+                    "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.35) 50%, transparent 100%)",
+                }}
+              />
+            </div>
+          )}
+
+          {/* Branded placeholder when image fails */}
+          {imgState === "error" && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span
+                className="text-5xl font-semibold select-none"
+                style={{ color: "#e8e8e8" }}
+                aria-hidden
+              >
+                p
+              </span>
+            </div>
+          )}
+
+          {/* OG image */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={ogImgUrl}
+            alt={recipe.name}
+            onLoad={() => setImgState("loaded")}
+            onError={() => setImgState("error")}
+            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${
+              imgState === "loaded" ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+          />
+        </div>
       </div>
 
-      {/* ── Card body ─────────────────────────────────────────────── */}
-      <div className="flex flex-col flex-1 p-4 sm:p-5">
+      {/* ─── Caption area (below the polaroid strip) ─── */}
+      <div className="flex flex-col flex-1 px-4 pb-4 -mt-1">
         {/* Name */}
         <h3 className="text-sm font-semibold text-ink dark:text-white leading-snug mb-1.5">
           {recipe.name}
@@ -111,16 +113,15 @@ export default function RecipeCard({
 
         {/* Description */}
         {recipe.description && (
-          <p className="text-xs text-muted dark:text-darkMuted leading-relaxed flex-1 mb-4 line-clamp-3">
+          <p className="text-xs text-muted dark:text-darkMuted leading-relaxed mb-4 line-clamp-2">
             {recipe.description}
           </p>
         )}
 
-        {/* ── Footer row ──────────────────────────────────────────── */}
-        <div className="flex items-center justify-between pt-3.5 border-t border-rule dark:border-darkBorder mt-auto">
-          {/* Attribution */}
+        {/* Footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-rule dark:border-darkBorder mt-auto">
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[0.65rem] text-faint dark:text-darkFaint truncate">
+            <span className="text-[0.65rem] text-faint dark:text-darkFaint">
               by {recipe.author}
             </span>
             {localClicks > 0 && (
@@ -129,8 +130,6 @@ export default function RecipeCard({
               </span>
             )}
           </div>
-
-          {/* CTA */}
           <a
             href={pokeUrl}
             target="_blank"
