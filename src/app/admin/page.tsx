@@ -14,6 +14,7 @@ interface AdminRecipe {
   clicks: number;
   submitted_at: string;
   tweet_id?: string | null;
+  approved: boolean;
 }
 
 const REPLY_TEXT = encodeURIComponent("Just added this to pokerecipe.book");
@@ -34,10 +35,10 @@ export default function AdminPage() {
   const [pin, setPin]       = useState<string | null>(null);
   const [authed, setAuthed] = useState(false);
 
-  const [tab, setTab]             = useState<Tab>("pending");
-  const [pending, setPending]     = useState<AdminRecipe[]>([]);
-  const [managed, setManaged]     = useState<AdminRecipe[]>([]);
-  const [loading, setLoading]     = useState(false);
+  const [tab, setTab]         = useState<Tab>("pending");
+  const [pending, setPending] = useState<AdminRecipe[]>([]);
+  const [managed, setManaged] = useState<AdminRecipe[]>([]);
+  const [loading, setLoading] = useState(false);
   const [actionMsg, setActionMsg] = useState("");
 
   useEffect(() => {
@@ -83,8 +84,7 @@ export default function AdminPage() {
   }
 
   async function tryAuth(p: string) {
-    setPinError("");
-    setPinLoading(true);
+    setPinError(""); setPinLoading(true);
     try {
       const res = await fetch(`/api/admin/recipes?status=pending&pin=${encodeURIComponent(p)}`);
       if (res.status === 401) {
@@ -95,18 +95,18 @@ export default function AdminPage() {
       }
       const { data } = await res.json() as { data?: AdminRecipe[] };
       sessionStorage.setItem("admin_pin", p);
-      setPin(p); setAuthed(true);
-      setPending(data ?? []);
+      setPin(p); setAuthed(true); setPending(data ?? []);
     } catch {
       setPinError("Connection error. Try again.");
       setDigits(["", "", "", ""]);
     } finally { setPinLoading(false); }
   }
 
+  // ─ Approve (unapproved recipe, no tweet) ───────────────────────────────────────────
   async function handleApprove(slug: string, name: string) {
     if (!pin) return;
     const snapshot = pending.find((r) => r.slug === slug) ?? null;
-    setPending((prev) => prev.filter((r) => r.slug !== slug));
+    setPending((p) => p.filter((r) => r.slug !== slug));
     try {
       const res = await fetch("/api/admin/approve", {
         method: "POST",
@@ -114,42 +114,79 @@ export default function AdminPage() {
         body: JSON.stringify({ slug, pin }),
       });
       if (!res.ok) {
-        if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
-        flash("Approval failed \u2014 please try again.");
-        return;
+        if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
+        flash("Approval failed \u2014 please try again."); return;
       }
-      if (snapshot) setManaged((prev) => [snapshot, ...prev]);
-      flash(`\u201c${name}\u201d approved and live on homepage.`);
+      if (snapshot) setManaged((m) => [{ ...snapshot, approved: true, tweet_id: null }, ...m]);
+      flash(`\u201c${name}\u201d approved and live.`);
     } catch {
-      if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+      if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
       flash("Approval failed \u2014 please try again.");
     }
   }
 
+  // ─ Reply & Approve (unapproved recipe with tweet) ───────────────────────────
   async function handleReplyApprove(slug: string, name: string, tweetId: string) {
     if (!pin) return;
     window.open(tweetIntentUrl(tweetId), "_blank", "noopener,noreferrer");
     const snapshot = pending.find((r) => r.slug === slug) ?? null;
-    setPending((prev) => prev.filter((r) => r.slug !== slug));
+    setPending((p) => p.filter((r) => r.slug !== slug));
     try {
+      // Approve also clears tweet_id — moves to Manage
       const res = await fetch("/api/admin/approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ slug, pin }),
       });
       if (!res.ok) {
-        if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
-        flash("Approval failed \u2014 please try again.");
-        return;
+        if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
+        flash("Approval failed \u2014 please try again."); return;
       }
-      if (snapshot) setManaged((prev) => [snapshot, ...prev]);
-      flash(`\u201c${name}\u201d approved! Reply window opened in a new tab.`);
+      if (snapshot) setManaged((m) => [{ ...snapshot, approved: true, tweet_id: null }, ...m]);
+      flash(`\u201c${name}\u201d approved! Reply window opened.`);
     } catch {
-      if (snapshot) setPending((prev) => [snapshot, ...prev.filter((r) => r.slug !== slug)]);
+      if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
       flash("Approval failed \u2014 please try again.");
     }
   }
 
+  // ─ Reply (already-live recipe with tweet — open intent + acknowledge) ─────────────
+  async function handleReplyAndAcknowledge(slug: string, name: string, tweetId: string) {
+    if (!pin) return;
+    window.open(tweetIntentUrl(tweetId), "_blank", "noopener,noreferrer");
+    await acknowledge(slug, name, `Replied to tweet \u2014 \u201c${name}\u201d moved to Manage.`);
+  }
+
+  // ─ Dismiss (already-live recipe — just acknowledge, no reply) ──────────────────
+  async function handleDismiss(slug: string, name: string) {
+    if (!pin) return;
+    await acknowledge(slug, name, `\u201c${name}\u201d dismissed to Manage.`);
+  }
+
+  // ─ Shared acknowledge helper ─────────────────────────────────────────────
+  async function acknowledge(slug: string, name: string, successMsg: string) {
+    const snapshot = pending.find((r) => r.slug === slug) ?? null;
+    setPending((p) => p.filter((r) => r.slug !== slug));
+    try {
+      const res = await fetch("/api/admin/acknowledge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slug, pin }),
+      });
+      if (!res.ok) {
+        if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
+        flash("Action failed \u2014 please try again."); return;
+      }
+      // Add to Manage with tweet_id cleared (since acknowledge nullifies it)
+      if (snapshot) setManaged((m) => [{ ...snapshot, tweet_id: null }, ...m]);
+      flash(successMsg);
+    } catch {
+      if (snapshot) setPending((p) => [snapshot, ...p.filter((r) => r.slug !== slug)]);
+      flash("Action failed \u2014 please try again.");
+    }
+  }
+
+  // ─ Delete ────────────────────────────────────────────────────────────────────
   async function handleDelete(slug: string, name: string) {
     if (!pin) return;
     if (!confirm(`Delete \u201c${name}\u201d? This cannot be undone.`)) return;
@@ -166,8 +203,7 @@ export default function AdminPage() {
       if (!res.ok) {
         if (pendingSnap) setPending((p) => [pendingSnap, ...p.filter((r) => r.slug !== slug)]);
         if (managedSnap) setManaged((m) => [managedSnap, ...m.filter((r) => r.slug !== slug)]);
-        flash("Delete failed \u2014 please try again.");
-        return;
+        flash("Delete failed \u2014 please try again."); return;
       }
       flash(`\u201c${name}\u201d deleted.`);
     } catch {
@@ -262,7 +298,7 @@ export default function AdminPage() {
           {!loading && displayed.length === 0 && (
             <div className="text-center py-20">
               <p className="text-xs text-muted dark:text-darkMuted">
-                {tab === "pending" ? "No recipes awaiting approval." : "No approved recipes yet."}
+                {tab === "pending" ? "No recipes awaiting action." : "No acknowledged recipes yet."}
               </p>
             </div>
           )}
@@ -281,80 +317,103 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayed.map((r) => (
-                    <tr key={r.slug} className="border-b border-rule dark:border-darkBorder last:border-0 hover:bg-lift/60 dark:hover:bg-darkSurface/60 transition-colors">
-                      <td className="px-5 py-4">
-                        <a href={`https://poke.com/r/${r.slug}`} target="_blank" rel="noopener noreferrer"
-                          className="font-medium text-ink dark:text-white hover:opacity-60 transition-opacity leading-snug">
-                          {r.name}
-                        </a>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-faint dark:text-darkFaint font-mono truncate max-w-[140px]">{r.slug}</span>
-                          {r.tweet_id && (
-                            <a href={`https://twitter.com/i/web/status/${r.tweet_id}`} target="_blank" rel="noopener noreferrer"
-                              className="text-[0.6rem] text-sky-500 dark:text-sky-400 hover:opacity-70 transition-opacity shrink-0">
-                              \u2192 tweet
+                  {displayed.map((r) => {
+                    const isLivePending = tab === "pending" && r.approved === true;
+                    return (
+                      <tr key={r.slug} className="border-b border-rule dark:border-darkBorder last:border-0 hover:bg-lift/60 dark:hover:bg-darkSurface/60 transition-colors">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2">
+                            <a href={`https://poke.com/r/${r.slug}`} target="_blank" rel="noopener noreferrer"
+                              className="font-medium text-ink dark:text-white hover:opacity-60 transition-opacity leading-snug">
+                              {r.name}
                             </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 hidden sm:table-cell">
-                        {r.category
-                          ? <span className="text-xs font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-2 py-0.5 rounded-full">{r.category}</span>
-                          : <span className="text-xs text-faint dark:text-darkFaint">&mdash;</span>}
-                      </td>
-                      <td className="px-5 py-4 hidden md:table-cell">
-                        <span className="text-xs text-muted dark:text-darkMuted">
-                          {tab === "manage"
-                            ? r.clicks.toLocaleString()
-                            : new Date(r.submitted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2 justify-end">
+                            {/* Green "Live" badge for auto-approved recipes sitting in pending */}
+                            {isLivePending && (
+                              <span className="text-[0.6rem] font-semibold tracking-wide text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0">
+                                Live
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-faint dark:text-darkFaint font-mono truncate max-w-[140px]">{r.slug}</span>
+                            {r.tweet_id && (
+                              <a href={`https://twitter.com/i/web/status/${r.tweet_id}`} target="_blank" rel="noopener noreferrer"
+                                className="text-[0.6rem] text-sky-500 dark:text-sky-400 hover:opacity-70 transition-opacity shrink-0">
+                                \u2192 tweet
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 hidden sm:table-cell">
+                          {r.category
+                            ? <span className="text-xs font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-2 py-0.5 rounded-full">{r.category}</span>
+                            : <span className="text-xs text-faint dark:text-darkFaint">&mdash;</span>}
+                        </td>
+                        <td className="px-5 py-4 hidden md:table-cell">
+                          <span className="text-xs text-muted dark:text-darkMuted">
+                            {tab === "manage"
+                              ? r.clicks.toLocaleString()
+                              : new Date(r.submitted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-2 justify-end">
 
-                          {/* Pending tab — Reply & Approve (tweet) or Approve (manual) */}
-                          {tab === "pending" && (
-                            r.tweet_id ? (
-                              <button
-                                onClick={() => handleReplyApprove(r.slug, r.name, r.tweet_id!)}
-                                className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
-                              >
-                                Reply &amp; Approve
-                              </button>
+                            {isLivePending ? (
+                              // Already live — just needs reply/dismiss acknowledgment
+                              <>
+                                {r.tweet_id && (
+                                  <button
+                                    onClick={() => handleReplyAndAcknowledge(r.slug, r.name, r.tweet_id!)}
+                                    className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+                                  >
+                                    Reply
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => handleDismiss(r.slug, r.name)}
+                                  className="text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 py-1.5 rounded-full hover:opacity-75 transition-opacity"
+                                >
+                                  Dismiss
+                                </button>
+                              </>
+                            ) : tab === "pending" ? (
+                              // Not yet approved — needs approval
+                              r.tweet_id ? (
+                                <button
+                                  onClick={() => handleReplyApprove(r.slug, r.name, r.tweet_id!)}
+                                  className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
+                                >
+                                  Reply &amp; Approve
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleApprove(r.slug, r.name)}
+                                  className="text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 py-1.5 rounded-full hover:opacity-75 transition-opacity"
+                                >
+                                  Approve
+                                </button>
+                              )
                             ) : (
+                              // Manage tab — no primary action needed
+                              null
+                            )}
+
+                            {/* Reject/Delete button */}
+                            {!isLivePending && (
                               <button
-                                onClick={() => handleApprove(r.slug, r.name)}
-                                className="text-xs font-medium bg-ink text-white dark:bg-white dark:text-ink px-3 py-1.5 rounded-full hover:opacity-75 transition-opacity"
+                                onClick={() => handleDelete(r.slug, r.name)}
+                                className="text-xs font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-3 py-1.5 rounded-full hover:border-red-300 dark:hover:border-red-700 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                               >
-                                Approve
+                                {tab === "pending" ? "Reject" : "Delete"}
                               </button>
-                            )
-                          )}
+                            )}
 
-                          {/* Manage tab — Reply button for tweet-sourced recipes */}
-                          {tab === "manage" && r.tweet_id && (
-                            <a
-                              href={tweetIntentUrl(r.tweet_id)}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs font-medium bg-sky-500 text-white px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity whitespace-nowrap"
-                            >
-                              Reply
-                            </a>
-                          )}
-
-                          <button
-                            onClick={() => handleDelete(r.slug, r.name)}
-                            className="text-xs font-medium border border-rule dark:border-darkBorder text-muted dark:text-darkMuted px-3 py-1.5 rounded-full hover:border-red-300 dark:hover:border-red-700 hover:text-red-500 dark:hover:text-red-400 transition-colors"
-                          >
-                            {tab === "pending" ? "Reject" : "Delete"}
-                          </button>
-
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

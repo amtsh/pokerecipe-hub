@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "../../../../../lib/supabase";
 
 /**
- * POST /api/admin/approve  { slug: string, pin: string }
- * Sets approved=true and clears tweet_id for the given recipe.
+ * POST /api/admin/acknowledge  { slug: string, pin: string }
  *
- * Clearing tweet_id moves the recipe to the Manage tab (out of the pending
- * acknowledgment queue). Without this, an approved recipe that still has a
- * tweet_id would re-appear in the Pending tab as a live-but-unacknowledged item.
+ * Marks an already-approved (live) recipe as acknowledged by the admin:
+ * sets tweet_id = null, which removes it from the Pending tab and
+ * moves it to the Manage tab.
+ *
+ * Used by the "Reply" and "Dismiss" actions on auto-approved scraper recipes.
+ * The recipe stays approved=true and visible on the homepage throughout.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -28,18 +30,19 @@ export async function POST(req: NextRequest) {
 
     const { error } = await sb
       .from("recipes")
-      .update({ approved: true, tweet_id: null })
-      .eq("slug", body.slug);
+      .update({ tweet_id: null })
+      .eq("slug", body.slug)
+      .eq("approved", true); // Safety: only acknowledge already-approved recipes
 
     if (error) {
-      console.error("[/api/admin/approve]", error.message);
+      console.error("[/api/admin/acknowledge]", error.message);
       return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
     }
     return NextResponse.json({ ok: true }, {
       headers: { "Cache-Control": "no-store" },
     });
   } catch (e) {
-    console.error("[/api/admin/approve]", e);
+    console.error("[/api/admin/acknowledge]", e);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
