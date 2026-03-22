@@ -193,7 +193,9 @@ export default function RecipeGrid({
               ? (
                 <>
                   {recipes.length} result{recipes.length !== 1 ? "s" : ""}
-                  {query.trim() ? <> for \u201c{query.trim()}\u201d</> : null}
+                  {/* &ldquo; / &rdquo; are HTML entities for curly quotes.
+                      Using \uXXXX escapes in JSX text nodes renders them literally. */}
+                  {query.trim() ? <> for &ldquo;{query.trim()}&rdquo;</> : null}
                   {activeCategory && !query.trim() ? <> in {activeCategory}</> : null}
                 </>
               )
@@ -338,11 +340,12 @@ export default function RecipeGrid({
                   Clear filters
                 </button>
               ) : (
+                // &rarr; is the HTML entity for → — using \u2192 in JSX text renders literally
                 <a
                   href="/submit"
                   className="text-xs font-medium text-white bg-ink dark:text-ink dark:bg-white hover:opacity-80 active:scale-[0.96] px-4 py-2 rounded-full transition-all duration-75"
                 >
-                  Add the first recipe \u2192
+                  Add the first recipe &rarr;
                 </a>
               )}
             </div>
@@ -357,7 +360,7 @@ export default function RecipeGrid({
               disabled={loadingMore}
               className="text-xs font-medium text-ink/50 dark:text-white/50 hover:text-ink dark:hover:text-white bg-black/[0.04] dark:bg-white/[0.06] hover:bg-black/[0.08] dark:hover:bg-white/[0.1] px-6 py-2.5 rounded-full active:scale-[0.96] transition-all duration-75 disabled:opacity-40"
             >
-              {loadingMore ? "Loading\u2026" : "Load More"}
+              {loadingMore ? "Loading…" : "Load More"}
             </button>
           </div>
         )}
@@ -369,7 +372,7 @@ export default function RecipeGrid({
         <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center px-3 py-2 overflow-hidden">
 
           {searchOpen ? (
-            // ─ Search input mode: bar becomes a single-purpose search field ────────
+            // ─ Search input mode: bar becomes a single-purpose search field
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <svg
                 className="w-3 h-3 text-black/40 dark:text-white/40 shrink-0"
@@ -399,7 +402,7 @@ export default function RecipeGrid({
               </button>
             </div>
           ) : (
-            // ─ Pill mode: Search trigger pill + scrollable category filters ─────
+            // ─ Pill mode: Search trigger pill + scrollable category filters
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
 
               {/* Search trigger — looks and scrolls like a category pill */}

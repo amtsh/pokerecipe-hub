@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import type { Recipe } from "./RecipeCard";
 
-/** Category \u2192 monogram background + text colour (shown while / if OG image fails). */
+/** Category → monogram background + text colour (shown while / if OG image fails). */
 const CATEGORY_MONO: Record<string, string> = {
   Developer:     "bg-violet-50  dark:bg-violet-950/60  text-violet-600 dark:text-violet-300",
   Travel:        "bg-sky-50     dark:bg-sky-950/60     text-sky-600    dark:text-sky-300",
@@ -32,7 +32,7 @@ export default function RecipeRow({
   const [imgError, setImgError]       = useState(false);
   const imgRef                        = useRef<HTMLImageElement>(null);
 
-  // Hydration race fix \u2014 same pattern as RecipeCard
+  // Hydration race fix — same pattern as RecipeCard
   useEffect(() => {
     const el = imgRef.current;
     if (!el) return;
@@ -65,9 +65,9 @@ export default function RecipeRow({
   return (
     <article className="flex items-center gap-3.5 px-4 py-3 group hover:bg-black/[0.02] dark:hover:bg-white/[0.025] transition-colors duration-100">
 
-      {/* Thumbnail / monogram \u2014 links to poke.com without incrementing click counter.
+      {/* Thumbnail / monogram — links to poke.com without incrementing click counter.
           rounded-[12px]: concentric with the outer rounded-2xl (16px) list container
-          at the ~4px gap created by px-4 padding: 16 \u2212 4 \u2248 12px. */}
+          at the ~4px gap created by px-4 padding: 16 − 4 ≈ 12px. */}
       <a
         href={pokeUrl}
         target="_blank"
@@ -77,7 +77,7 @@ export default function RecipeRow({
         aria-hidden
       >
         <div className="w-[42px] h-[42px] rounded-[12px] overflow-hidden relative flex items-center justify-center shadow-[0_1px_4px_rgba(0,0,0,0.10)] dark:shadow-[0_1px_4px_rgba(0,0,0,0.4)]">
-          {/* Category-coloured monogram \u2014 visible until OG image loads */}
+          {/* Category-coloured monogram — visible until OG image loads */}
           <div className={`absolute inset-0 flex items-center justify-center select-none text-base font-bold ${monoClass}`}
             aria-hidden>
             {recipe.name.charAt(0).toUpperCase()}
@@ -100,7 +100,7 @@ export default function RecipeRow({
         </div>
       </a>
 
-      {/* Main content \u2014 the primary tap target; opens poke.com and tracks the click */}
+      {/* Main content — the primary tap target; opens poke.com and tracks the click */}
       <a
         href={pokeUrl}
         target="_blank"
@@ -132,9 +132,11 @@ export default function RecipeRow({
             </span>
           )}
           {localClicks > 0 && (
-            // tabular-nums: equal-width digits prevent jitter when count updates live
+            // tabular-nums: equal-width digits prevent layout jitter when count updates live.
+            // &nbsp; (non-breaking space) keeps the number and "views" on the same line
+            // without using a \uXXXX escape in JSX text context (which renders literally).
             <span className="text-[0.6rem] text-faint dark:text-darkFaint tabular-nums">
-              {localClicks.toLocaleString()}\u00a0views
+              {localClicks.toLocaleString()}&nbsp;views
             </span>
           )}
         </div>
