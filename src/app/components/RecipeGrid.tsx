@@ -59,7 +59,7 @@ export default function RecipeGrid({
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
-  // Controls whether the floating bar is in “search input” mode or “pill” mode
+  // Controls whether the floating bar is in search-input mode or pill mode
   const [searchOpen, setSearchOpen] = useState(false);
 
   // View toggle state — seeded from cookie via SSR prop to avoid layout shift
@@ -143,12 +143,10 @@ export default function RecipeGrid({
     } else {
       router.replace("/", { scroll: false });
     }
-    // Scroll to the top of the page so the recipe results are in view
+    // Scroll to top so recipe results are immediately visible
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  /** Switch view with a 150ms cross-fade. Persists to cookie so the server
-   *  can server-render the correct layout on next load (no CLS). */
   function handleToggleView(newView: "grid" | "list") {
     if (newView === view) return;
     if (fadeTimer.current) clearTimeout(fadeTimer.current);
@@ -160,14 +158,11 @@ export default function RecipeGrid({
     }, 150);
   }
 
-  /** Open the search input inside the floating bar and focus it. */
   function openSearch() {
     setSearchOpen(true);
-    // Defer focus so the input has mounted / transitioned in
     setTimeout(() => searchRef.current?.focus(), 30);
   }
 
-  /** Close the search input, clearing the query and returning to pill mode. */
   function closeSearch() {
     setQuery("");
     setSearchOpen(false);
@@ -183,7 +178,6 @@ export default function RecipeGrid({
 
   const isFiltered = query.trim().length > 0 || !!activeCategory;
 
-  // active:scale-[0.95] on pills for tactile press feedback
   const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 active:scale-[0.95] whitespace-nowrap";
   const pillActive   = "bg-ink text-white dark:bg-white dark:text-ink";
   const pillInactive = "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white";
@@ -194,7 +188,6 @@ export default function RecipeGrid({
 
         {/* Section header: results count + view toggle */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 h-7">
-          {/* Results label — shown only when filtering */}
           <span className="text-xs text-faint dark:text-darkFaint">
             {isFiltered && !loading
               ? (
@@ -207,7 +200,6 @@ export default function RecipeGrid({
               : null}
           </span>
 
-          {/* Segmented view toggle */}
           <div
             className="flex items-center gap-0.5 bg-lift dark:bg-darkInput rounded-[8px] p-[3px]"
             role="group"
@@ -269,7 +261,6 @@ export default function RecipeGrid({
         {/* Content area — fades when switching views */}
         <div className={`transition-opacity duration-150 ${fading ? "opacity-0" : "opacity-100"}`}>
 
-          {/* ─ Grid view ───────────────────────────────────────── */}
           {view === "grid" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -294,7 +285,6 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* ─ List view ───────────────────────────────────────── */}
           {view === "list" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -321,7 +311,6 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* ─ Polished empty state (shared across grid + list) ────────────────── */}
           {!loading && recipes.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
               <div className="w-16 h-16 rounded-2xl bg-lift dark:bg-darkInput flex items-center justify-center mb-5">
@@ -359,9 +348,8 @@ export default function RecipeGrid({
             </div>
           )}
 
-        </div>{/* /fade wrapper */}
+        </div>
 
-        {/* Load more */}
         {!loading && hasMore && recipes.length > 0 && (
           <div className="flex justify-center mt-16 sm:mt-20">
             <button
@@ -381,9 +369,7 @@ export default function RecipeGrid({
         <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center px-3 py-2 overflow-hidden">
 
           {searchOpen ? (
-            // ─ Search input mode: fills the entire bar ─────────────────────────
-            // The bar becomes a clean single-purpose search field.
-            // The × button clears the query and returns to pill mode.
+            // ─ Search input mode: bar becomes a single-purpose search field ────────
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <svg
                 className="w-3 h-3 text-black/40 dark:text-white/40 shrink-0"
@@ -403,22 +389,20 @@ export default function RecipeGrid({
                 aria-label="Search recipes"
                 className="flex-1 min-w-0 bg-transparent text-ink dark:text-white text-xs focus:outline-none placeholder:text-black/35 dark:placeholder:text-white/35"
               />
+              {/* × closes search and clears the query */}
               <button
                 onClick={closeSearch}
                 aria-label="Close search"
                 className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-black/[0.07] dark:bg-white/[0.12] text-black/50 dark:text-white/50 hover:bg-black/[0.12] dark:hover:bg-white/[0.2] hover:text-ink dark:hover:text-white text-[11px] leading-none transition-all duration-100 active:scale-90"
-                aria-label="Close search"
               >
                 &times;
               </button>
             </div>
           ) : (
-            // ─ Pill mode: Search trigger pill + scrollable categories ──────────
-            // Search is the first pill in the row, visually grouped with
-            // the categories. Clicking it opens the search input above.
+            // ─ Pill mode: Search trigger pill + scrollable category filters ─────
             <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
 
-              {/* Search trigger pill */}
+              {/* Search trigger — looks and scrolls like a category pill */}
               <button
                 onClick={openSearch}
                 aria-label="Open search"
@@ -436,10 +420,10 @@ export default function RecipeGrid({
                 Search
               </button>
 
-              {/* Thin divider between search and category filters */}
+              {/* Thin vertical divider between search and category filters */}
               <div className="w-px h-3 bg-black/[0.12] dark:bg-white/[0.12] shrink-0" aria-hidden />
 
-              {/* Category pills */}
+              {/* Category filters */}
               <button
                 onClick={() => handleCategory(null)}
                 className={`${pillBase} ${!activeCategory ? pillActive : pillInactive}`}
