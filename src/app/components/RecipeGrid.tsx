@@ -59,7 +59,10 @@ export default function RecipeGrid({
   const [activeCategory, setActiveCategory] = useState<string | null>(initialCategory ?? null);
   const [categories, setCategories]         = useState<string[]>([]);
 
-  // View toggle state \u2014 seeded from cookie via SSR prop to avoid layout shift
+  // Controls whether the floating bar is in “search input” mode or “pill” mode
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // View toggle state — seeded from cookie via SSR prop to avoid layout shift
   const [view, setView]     = useState<"grid" | "list">(initialView);
   const [fading, setFading] = useState(false);
   const fadeTimer           = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -140,6 +143,8 @@ export default function RecipeGrid({
     } else {
       router.replace("/", { scroll: false });
     }
+    // Scroll to the top of the page so the recipe results are in view
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   /** Switch view with a 150ms cross-fade. Persists to cookie so the server
@@ -155,16 +160,30 @@ export default function RecipeGrid({
     }, 150);
   }
 
+  /** Open the search input inside the floating bar and focus it. */
+  function openSearch() {
+    setSearchOpen(true);
+    // Defer focus so the input has mounted / transitioned in
+    setTimeout(() => searchRef.current?.focus(), 30);
+  }
+
+  /** Close the search input, clearing the query and returning to pill mode. */
+  function closeSearch() {
+    setQuery("");
+    setSearchOpen(false);
+    searchRef.current?.blur();
+  }
+
   function clearFilters() {
     setQuery("");
     setActiveCategory(null);
+    setSearchOpen(false);
     router.replace("/", { scroll: false });
   }
 
   const isFiltered = query.trim().length > 0 || !!activeCategory;
 
-  // active:scale-[0.95] on pills for tactile press feedback (75ms \u2014 fast enough
-  // to feel immediate, not so fast it clips the hover color transition)
+  // active:scale-[0.95] on pills for tactile press feedback
   const pillBase     = "shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-all duration-150 active:scale-[0.95] whitespace-nowrap";
   const pillActive   = "bg-ink text-white dark:bg-white dark:text-ink";
   const pillInactive = "text-muted dark:text-darkMuted hover:text-ink dark:hover:text-white";
@@ -175,7 +194,7 @@ export default function RecipeGrid({
 
         {/* Section header: results count + view toggle */}
         <div className="flex items-center justify-between mb-6 sm:mb-8 h-7">
-          {/* Results label \u2014 shown only when filtering */}
+          {/* Results label — shown only when filtering */}
           <span className="text-xs text-faint dark:text-darkFaint">
             {isFiltered && !loading
               ? (
@@ -188,18 +207,12 @@ export default function RecipeGrid({
               : null}
           </span>
 
-          {/* Segmented view toggle
-              The SVG key changes on every view switch, causing React to remount
-              just the SVG element. When the new icon is the active one it
-              receives the iconPopIn animation via inline style, giving it the
-              spring pop-in from globals.css. The inactive icon remounts without
-              animation \u2014 only the incoming active icon animates. */}
+          {/* Segmented view toggle */}
           <div
             className="flex items-center gap-0.5 bg-lift dark:bg-darkInput rounded-[8px] p-[3px]"
             role="group"
             aria-label="Recipe view"
           >
-            {/* Grid button */}
             <button
               onClick={() => handleToggleView("grid")}
               title="Grid view"
@@ -224,8 +237,6 @@ export default function RecipeGrid({
                 <rect x="9" y="9" width="6" height="6" rx="1.25" />
               </svg>
             </button>
-
-            {/* List button */}
             <button
               onClick={() => handleToggleView("list")}
               title="List view"
@@ -255,10 +266,10 @@ export default function RecipeGrid({
           </div>
         </div>
 
-        {/* Content area \u2014 fades when switching views */}
+        {/* Content area — fades when switching views */}
         <div className={`transition-opacity duration-150 ${fading ? "opacity-0" : "opacity-100"}`}>
 
-          {/* \u2500 Grid view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+          {/* ─ Grid view ───────────────────────────────────────── */}
           {view === "grid" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -283,7 +294,7 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* \u2500 List view \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+          {/* ─ List view ───────────────────────────────────────── */}
           {view === "list" && (
             <>
               {!loading && recipes.length > 0 && (
@@ -310,13 +321,9 @@ export default function RecipeGrid({
             </>
           )}
 
-          {/* \u2500 Polished empty state (shared across grid + list) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */}
+          {/* ─ Polished empty state (shared across grid + list) ────────────────── */}
           {!loading && recipes.length === 0 && (
             <div className="flex flex-col items-center justify-center py-24 text-center">
-              {/* Branded \u201cp\u201d monogram in a lift box \u2014 same visual language as the
-                  RecipeCard image error placeholder, making the empty state feel
-                  deliberate rather than broken. translateY(2px) compensates for the
-                  descender so the letter reads as optically centered. */}
               <div className="w-16 h-16 rounded-2xl bg-lift dark:bg-darkInput flex items-center justify-center mb-5">
                 <span
                   className="text-3xl font-semibold select-none text-muted/30 dark:text-white/15"
@@ -326,19 +333,15 @@ export default function RecipeGrid({
                   p
                 </span>
               </div>
-
               <p className="text-sm font-semibold tracking-tight text-ink dark:text-white mb-1.5">
                 {isFiltered ? "Nothing here yet" : "No recipes yet"}
               </p>
-
               <p className="text-xs text-muted dark:text-darkMuted mb-6 max-w-[210px] leading-relaxed">
                 {isFiltered
                   ? "Try a different category or clear the search"
                   : "Be the first to share a Poke automation recipe"}
               </p>
-
               {isFiltered ? (
-                // Clear-filters action when search/category yields nothing
                 <button
                   onClick={clearFilters}
                   className="text-xs font-medium text-muted dark:text-darkMuted bg-lift dark:bg-darkInput px-4 py-2 rounded-full hover:text-ink dark:hover:text-white hover:bg-black/[0.07] dark:hover:bg-white/[0.1] active:scale-[0.96] transition-all duration-75"
@@ -346,7 +349,6 @@ export default function RecipeGrid({
                   Clear filters
                 </button>
               ) : (
-                // Pill CTA for the genuinely empty state
                 <a
                   href="/submit"
                   className="text-xs font-medium text-white bg-ink dark:text-ink dark:bg-white hover:opacity-80 active:scale-[0.96] px-4 py-2 rounded-full transition-all duration-75"
@@ -359,7 +361,7 @@ export default function RecipeGrid({
 
         </div>{/* /fade wrapper */}
 
-        {/* Load more \u2014 active:scale-[0.96] for press feedback */}
+        {/* Load more */}
         {!loading && hasMore && recipes.length > 0 && (
           <div className="flex justify-center mt-16 sm:mt-20">
             <button
@@ -376,56 +378,86 @@ export default function RecipeGrid({
 
       {/* Floating pill */}
       <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none">
-        <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center gap-2 px-3 py-2">
+        <div className="w-full max-w-2xl pointer-events-auto bg-white/85 dark:bg-[#0a0a0a]/85 backdrop-blur-xl rounded-full ring-1 ring-black/[0.07] dark:ring-white/[0.07] shadow-[0_8px_40px_rgba(0,0,0,0.14)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.55)] flex items-center px-3 py-2 overflow-hidden">
 
-          {/* Search */}
-          <div className="relative shrink-0">
-            <svg
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-black/40 dark:text-white/40 pointer-events-none"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
-              strokeLinecap="round" strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <line x1="16.5" y1="16.5" x2="22" y2="22" />
-            </svg>
-            <input
-              ref={searchRef}
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search"
-              aria-label="Search recipes"
-              className="w-[120px] focus:w-[190px] sm:focus:w-[220px] transition-[width] duration-200 ease-out bg-black/[0.05] dark:bg-white/[0.08] text-ink dark:text-white text-xs rounded-full pl-7 pr-2 py-1.5 focus:outline-none focus:bg-black/[0.08] dark:focus:bg-white/[0.11] placeholder:text-black/40 dark:placeholder:text-white/40"
-            />
-            {query && (
+          {searchOpen ? (
+            // ─ Search input mode: fills the entire bar ─────────────────────────
+            // The bar becomes a clean single-purpose search field.
+            // The × button clears the query and returns to pill mode.
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <svg
+                className="w-3 h-3 text-black/40 dark:text-white/40 shrink-0"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="16.5" y1="16.5" x2="22" y2="22" />
+              </svg>
+              <input
+                ref={searchRef}
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search recipes"
+                aria-label="Search recipes"
+                className="flex-1 min-w-0 bg-transparent text-ink dark:text-white text-xs focus:outline-none placeholder:text-black/35 dark:placeholder:text-white/35"
+              />
               <button
-                onClick={() => { setQuery(""); searchRef.current?.blur(); }}
-                aria-label="Clear search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-black/40 dark:text-white/40 hover:text-muted text-[10px] leading-none"
+                onClick={closeSearch}
+                aria-label="Close search"
+                className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-black/[0.07] dark:bg-white/[0.12] text-black/50 dark:text-white/50 hover:bg-black/[0.12] dark:hover:bg-white/[0.2] hover:text-ink dark:hover:text-white text-[11px] leading-none transition-all duration-100 active:scale-90"
+                aria-label="Close search"
               >
                 &times;
               </button>
-            )}
-          </div>
+            </div>
+          ) : (
+            // ─ Pill mode: Search trigger pill + scrollable categories ──────────
+            // Search is the first pill in the row, visually grouped with
+            // the categories. Clicking it opens the search input above.
+            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
 
-          {/* Category pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide flex-1 min-w-0">
-            <button
-              onClick={() => handleCategory(null)}
-              className={`${pillBase} ${!activeCategory ? pillActive : pillInactive}`}
-            >
-              All
-            </button>
-            {categories.map((cat) => (
+              {/* Search trigger pill */}
               <button
-                key={cat}
-                onClick={() => handleCategory(cat)}
-                className={`${pillBase} ${activeCategory === cat ? pillActive : pillInactive}`}
+                onClick={openSearch}
+                aria-label="Open search"
+                className={`${pillBase} ${pillInactive} flex items-center gap-1.5`}
               >
-                {cat}
+                <svg
+                  className="w-3 h-3 shrink-0"
+                  viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"
+                  strokeLinecap="round" strokeLinejoin="round"
+                  aria-hidden
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <line x1="16.5" y1="16.5" x2="22" y2="22" />
+                </svg>
+                Search
               </button>
-            ))}
-          </div>
+
+              {/* Thin divider between search and category filters */}
+              <div className="w-px h-3 bg-black/[0.12] dark:bg-white/[0.12] shrink-0" aria-hidden />
+
+              {/* Category pills */}
+              <button
+                onClick={() => handleCategory(null)}
+                className={`${pillBase} ${!activeCategory ? pillActive : pillInactive}`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => handleCategory(cat)}
+                  className={`${pillBase} ${activeCategory === cat ? pillActive : pillInactive}`}
+                >
+                  {cat}
+                </button>
+              ))}
+
+            </div>
+          )}
 
         </div>
       </div>
