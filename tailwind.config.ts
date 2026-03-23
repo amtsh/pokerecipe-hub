@@ -1,1 +1,69 @@
-aW1wb3J0IHR5cGUgeyBDb25maWcgfSBmcm9tICJ0YWlsd2luZGNzcyI7Cgpjb25zdCBjb25maWc6IENvbmZpZyA9IHsKICBkYXJrTW9kZTogImNsYXNzIiwKICBjb250ZW50OiBbCiAgICAiLi9zcmMvcGFnZXMvKiovKi57anMsdHMsanN4LHRzeCxtZHh9IiwKICAgICIuL3NyYy9jb21wb25lbnRzLyoqLyoue2pzLHRzLGpzeCx0c3gsbWR4fSIsCiAgICAiLi9zcmMvYXBwLyoqLyoue2pzLHRzLGpzeCx0c3gsbWR4fSIsCiAgXSwKICB0aGVtZTogewogICAgZXh0ZW5kOiB7CiAgICAgIGZvbnRGYW1pbHk6IHsKICAgICAgICBzYW5zOiBbIidJbnRlciciLCAic3lzdGVtLXVpIiwgInNhbnMtc2VyaWYiXSwKICAgICAgfSwKICAgICAgLy8gbm9yLm1hLWluc3BpcmVkIHRyYWNraW5nIHNjYWxlCiAgICAgIC8vIFN1aXNzZSBJbnQnbCBmZWVsOiB0aWdodC10by1uZXV0cmFsIG9uIGJvZHksIHZlcnkgdGlnaHQgb24gZGlzcGxheSwKICAgICAgLy8gd2lkZSB0cmFja2luZyBvbmx5IGZvciB1cHBlcmNhc2UgbGFiZWwgY2FwcwogICAgICBsZXR0ZXJTcGFjaW5nOiB7CiAgICAgICAgdGlnaHRlc3Q6ICAiLTAuMDVlbSIsICAgLy8gZGlzcGxheSAvIGhlcm8gaGVhZGluZ3MKICAgICAgICB0aWdodGVyOiAgICItMC4wM2VtIiwgICAvLyBzZWN0aW9uIGhlYWRpbmdzCiAgICAgICAgdGlnaHQ6ICAgICAiLTAuMDE1ZW0iLCAgLy8gc3ViLWhlYWRpbmdzLCBuYXYKICAgICAgICBzbnVnOiAgICAgICItMC4wMDhlbSIsICAvLyBib2R5IGRlZmF1bHQgKHJlcGxhY2VzIDAgdG8gZmVlbCBtb3JlIFN3aXNzKQogICAgICAgIG5vcm1hbDogICAgIjBlbSIsCiAgICAgICAgbGFiZWw6ICAgICAiMC4xMmVtIiwgICAgLy8gc21hbGwgdXBwZXJjYXNlIGxhYmVscwogICAgICAgIHdpZGVzdDogICAgIjAuMjJlbSIsICAgIC8vIGhlcm8gZXllYnJvd3MKICAgICAgfSwKICAgICAgLy8gbm9yLm1hIGxpbmUtaGVpZ2h0IHNjYWxlCiAgICAgIGxpbmVIZWlnaHQ6IHsKICAgICAgICBoZWFkaW5nOiAgIjEuMDgiLCAgLy8gZGlzcGxheSBoZWFkaW5ncyAtIHZlcnkgdGlnaHQKICAgICAgICB0aXRsZTogICAgIjEuMTgiLCAgLy8gc2VjdGlvbiB0aXRsZXMKICAgICAgICBzbnVnOiAgICAgIjEuMzUiLCAgLy8gc3ViLWhlYWRpbmdzCiAgICAgICAgbm9ybWFsOiAgICIxLjUiLCAgIC8vIGJvZHkgY29weQogICAgICAgIHJlbGF4ZWQ6ICAiMS42IiwgICAvLyBsb25nLWZvcm0gcGFyYWdyYXBocwogICAgICB9LAogICAgICAvLyBub3IubWEtaW5zcGlyZWQgZm9udC1zaXplIHN0ZXBzIChmbHVpZC1yZWFkeSkKICAgICAgZm9udFNpemU6IHsKICAgICAgICAiMnhzIjogIFsiMC42cmVtIiwgIHsgbGluZUhlaWdodDogIjEiIH1dLAogICAgICAgIHhzOiAgICAgWyIwLjc1cmVtIiwgeyBsaW5lSGVpZ2h0OiAiMS41IiB9XSwKICAgICAgICBzbTogICAgIFsiMC44NzVyZW0iLHsgbGluZUhlaWdodDogIjEuNSIgfV0sCiAgICAgICAgYmFzZTogICBbIjFyZW0iLCAgICB7IGxpbmVIZWlnaHQ6ICIxLjUiIH1dLAogICAgICAgIGxnOiAgICAgWyIxLjEyNXJlbSIseyBsaW5lSGVpZ2h0OiAiMS4zNSIgfV0sCiAgICAgICAgeGw6ICAgICBbIjEuMjVyZW0iLCB7IGxpbmVIZWlnaHQ6ICIxLjI1IiB9XSwKICAgICAgICAiMnhsIjogIFsiMS41cmVtIiwgIHsgbGluZUhlaWdodDogIjEuMTgiIH1dLAogICAgICAgICIzeGwiOiAgWyIxLjg3NXJlbSIseyBsaW5lSGVpZ2h0OiAiMS4xIiB9XSwKICAgICAgICAiNHhsIjogIFsiMi4yNXJlbSIsIHsgbGluZUhlaWdodDogIjEuMDgiIH1dLAogICAgICAgICI1eGwiOiAgWyIzcmVtIiwgICAgeyBsaW5lSGVpZ2h0OiAiMSIgfV0sCiAgICAgIH0sCiAgICAgIGNvbG9yczogewogICAgICAgIC8vIExpZ2h0IG1vZGUgcGFsZXR0ZQogICAgICAgIGluazogICAgIiMwYTBhMGEiLAogICAgICAgIG11dGVkOiAgIiM2YjZiNmIiLAogICAgICAgIGZhaW50OiAgIiNiM2IzYjMiLAogICAgICAgIHJ1bGU6ICAgIiNlOGU4ZTgiLAogICAgICAgIGNhbnZhczogIiNmZmZmZmYiLAogICAgICAgIGxpZnQ6ICAgIiNmN2Y3ZjciLAogICAgICAgIC8vIERhcmsgbW9kZSBwYWxldHRlCiAgICAgICAgZGFya0JnOiAgICAgICIjMGEwYTBhIiwKICAgICAgICBkYXJrU3VyZmFjZTogIiMxMTExMTEiLAogICAgICAgIGRhcmtJbnB1dDogICAiIzE4MTgxOCIsCiAgICAgICAgZGFya0JvcmRlcjogICIjMjcyNzI3IiwKICAgICAgICBkYXJrTXV0ZWQ6ICAgIiM4YThhOGEiLAogICAgICAgIGRhcmtGYWludDogICAiIzU1NTU1NSIsCiAgICAgIH0sCiAgICAgIG1heFdpZHRoOiB7IGNvbnRlbnQ6ICI2ODBweCIsIHdpZGU6ICIxMDAwcHgiIH0sCiAgICB9LAogIH0sCiAgcGx1Z2luczogW10sCn07CmV4cG9ydCBkZWZhdWx0IGNvbmZpZzsK
+import type { Config } from "tailwindcss";
+
+const config: Config = {
+  darkMode: "class",
+  content: [
+    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ["'Inter'", "system-ui", "sans-serif"],
+      },
+      // nor.ma-inspired tracking scale
+      // Suisse Int'l feel: tight-to-neutral on body, very tight on display,
+      // wide tracking only for uppercase label caps
+      letterSpacing: {
+        tightest:  "-0.05em",   // display / hero headings
+        tighter:   "-0.03em",   // section headings
+        tight:     "-0.015em",  // sub-headings, nav
+        snug:      "-0.008em",  // body default (replaces 0 to feel more Swiss)
+        normal:    "0em",
+        label:     "0.12em",    // small uppercase labels
+        widest:    "0.22em",    // hero eyebrows
+      },
+      // nor.ma line-height scale
+      lineHeight: {
+        heading:  "1.08",  // display headings - very tight
+        title:    "1.18",  // section titles
+        snug:     "1.35",  // sub-headings
+        normal:   "1.5",   // body copy
+        relaxed:  "1.6",   // long-form paragraphs
+      },
+      // nor.ma-inspired font-size steps (fluid-ready)
+      fontSize: {
+        "2xs":  ["0.6rem",  { lineHeight: "1" }],
+        xs:     ["0.75rem", { lineHeight: "1.5" }],
+        sm:     ["0.875rem",{ lineHeight: "1.5" }],
+        base:   ["1rem",    { lineHeight: "1.5" }],
+        lg:     ["1.125rem",{ lineHeight: "1.35" }],
+        xl:     ["1.25rem", { lineHeight: "1.25" }],
+        "2xl":  ["1.5rem",  { lineHeight: "1.18" }],
+        "3xl":  ["1.875rem",{ lineHeight: "1.1" }],
+        "4xl":  ["2.25rem", { lineHeight: "1.08" }],
+        "5xl":  ["3rem",    { lineHeight: "1" }],
+      },
+      colors: {
+        // Light mode palette
+        ink:    "#0a0a0a",
+        muted:  "#6b6b6b",
+        faint:  "#b3b3b3",
+        rule:   "#e8e8e8",
+        canvas: "#ffffff",
+        lift:   "#f7f7f7",
+        // Dark mode palette
+        darkBg:      "#0a0a0a",
+        darkSurface: "#111111",
+        darkInput:   "#181818",
+        darkBorder:  "#272727",
+        darkMuted:   "#8a8a8a",
+        darkFaint:   "#555555",
+      },
+      maxWidth: { content: "680px", wide: "1000px" },
+    },
+  },
+  plugins: [],
+};
+export default config;
