@@ -1,1 +1,18 @@
-ZXhwb3J0IGRlZmF1bHQgZnVuY3Rpb24gSGVybygpIHsKICByZXR1cm4gKAogICAgPHNlY3Rpb24gY2xhc3NOYW1lPSJwdC0zNiBzbTpwdC01MiBwYi0xNiBzbTpwYi0yNCBweC00IHNtOnB4LTYgdGV4dC1jZW50ZXIiPgogICAgICA8ZGl2IGNsYXNzTmFtZT0ibWF4LXctY29udGVudCBteC1hdXRvIj4KICAgICAgICA8cCBjbGFzc05hbWU9InR5cGUtbGFiZWwgdGV4dC1mYWludCBkYXJrOnRleHQtZGFya0ZhaW50IG1iLTciPgogICAgICAgICAgQ29tbXVuaXR5CiAgICAgICAgPC9wPgogICAgICAgIDxoMSBjbGFzc05hbWU9InRleHQtWzEuODVyZW1dIHNtOnRleHQtWzIuMjVyZW1dIGxlYWRpbmctWzEuMDhdIHRyYWNraW5nLVstMC4wNWVtXSBmb250LW1lZGl1bSB0ZXh0LWluayBkYXJrOnRleHQtd2hpdGUgbWItNCI+CiAgICAgICAgICBSZWNpcGVzIGZvciBQb2tlLgogICAgICAgIDwvaDE+CiAgICAgICAgPHAgY2xhc3NOYW1lPSJ0ZXh0LXhzIHNtOnRleHQtc20gdGV4dC1tdXRlZCBkYXJrOnRleHQtZGFya011dGVkIGxlYWRpbmctWzEuNl0gdHJhY2tpbmctWy0wLjAwOGVtXSBtYXgtdy14cyBzbTptYXgtdy1zbSBteC1hdXRvIj4KICAgICAgICAgIFRoZSBjb21tdW5pdHktcG93ZXJlZCBpbmRleCBmb3IgUG9rZSBhdXRvbWF0aW9uIHJlY2lwZXMuCiAgICAgICAgICBEaXNjb3Zlciwgc2hhcmUsIGFuZCB0cmFjayB0aGUgbW9zdCB1c2VmdWwgYXV0b21hdGlvbnMuCiAgICAgICAgPC9wPgogICAgICA8L2Rpdj4KICAgIDwvc2VjdGlvbj4KICApOwp9Cg==
+export default function Hero() {
+  return (
+    <section className="pt-36 sm:pt-52 pb-16 sm:pb-24 px-4 sm:px-6 text-center">
+      <div className="max-w-content mx-auto">
+        <p className="type-label text-faint dark:text-darkFaint mb-7">
+          Community
+        </p>
+        <h1 className="text-[1.85rem] sm:text-[2.25rem] leading-[1.08] tracking-[-0.05em] font-medium text-ink dark:text-white mb-4">
+          Recipes for Poke.
+        </h1>
+        <p className="text-xs sm:text-sm text-muted dark:text-darkMuted leading-[1.6] tracking-[-0.008em] max-w-xs sm:max-w-sm mx-auto">
+          The community-powered index for Poke automation recipes.
+          Discover, share, and track the most useful automations.
+        </p>
+      </div>
+    </section>
+  );
+}
